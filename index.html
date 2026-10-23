@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font-size:14px}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<title>Sarva Price Desk</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky toolbar, tabbed workspace; SKU tab = table + sticky detail panel (stacks on narrow) */
+:root{
+  --bg:#f3f4f1; --surface:#ffffff; --sunk:#eaece7; --ink:#18212a; --muted:#5b6670; --line:#d9ddd6;
+  --accent:#1d5a86; --accent-ink:#ffffff; --accent-soft:#dde9f2;
+  --foam:#d9a520; --lam:#7b8f5c; --adh:#a07a5a; --pack:#9aa3ab; --log:#4f7ea3; --comm:#8a6aa8; --profit:#2f8a5b; --loss:#c2463a;
+  --good:#2f8a5b; --good-soft:#dcefe3; --warn:#b37a00; --warn-soft:#f6ebcf; --bad:#c2463a; --bad-soft:#f6dcd8;
+  --f-display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#13181d; --surface:#1b2128; --sunk:#232a32; --ink:#e7ebee; --muted:#9aa5ae; --line:#2f3841;
+  --accent:#6aaee0; --accent-ink:#0d1620; --accent-soft:#1f3346;
+  --foam:#e5b84a; --lam:#9db27d; --adh:#c49a78; --pack:#7f8a93; --log:#73a5cc; --comm:#ae90cc; --profit:#4fbf85; --loss:#e8746a;
+  --good:#4fbf85; --good-soft:#1c3328; --warn:#e2b04a; --warn-soft:#3a3020; --bad:#e8746a; --bad-soft:#3d2422;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13181d; --surface:#1b2128; --sunk:#232a32; --ink:#e7ebee; --muted:#9aa5ae; --line:#2f3841;
+  --accent:#6aaee0; --accent-ink:#0d1620; --accent-soft:#1f3346;
+  --foam:#e5b84a; --lam:#9db27d; --adh:#c49a78; --pack:#7f8a93; --log:#73a5cc; --comm:#ae90cc; --profit:#4fbf85; --loss:#e8746a;
+  --good:#4fbf85; --good-soft:#1c3328; --warn:#e2b04a; --warn-soft:#3a3020; --bad:#e8746a; --bad-soft:#3d2422;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1440px;margin:0 auto}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px;padding-block:12px}
+h1{font-family:var(--f-display);font-stretch:85%;font-weight:800;font-size:22px;letter-spacing:-.01em;margin:0;text-wrap:balance}
+h1 small{display:block;font-family:var(--f-body);font-stretch:100%;font-weight:400;font-size:12px;color:var(--muted);letter-spacing:0}
+.fx{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin-left:auto}
+.fx label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+input,select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:4px 6px}
+input[type=number]{font-family:var(--f-mono);font-size:13px;width:84px;text-align:right}
+input:focus-visible,select:focus-visible,button:focus-visible,tr:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:4px;padding:6px 10px}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button:hover:not(:disabled){border-color:var(--accent)}
+button:disabled{opacity:.5;cursor:default}
+nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-top:16px;overflow-x:auto}
+nav.tabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:10px 14px;font-family:var(--f-display);font-stretch:90%;font-weight:600;font-size:15px;color:var(--muted);white-space:nowrap}
+nav.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent)}
+nav.tabs .count{display:inline-block;margin-left:6px;font-family:var(--f-mono);font-size:11px;background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:1px 7px;font-weight:500}
+main{padding-block:18px 48px}
+.summary{display:flex;flex-wrap:wrap;gap:10px 28px;align-items:flex-end;margin-bottom:14px}
+.stat{display:flex;flex-direction:column}
+.stat b{font-family:var(--f-mono);font-weight:500;font-size:22px;font-variant-numeric:tabular-nums}
+.stat span{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.stat.bad b{color:var(--bad)} .stat.warn b{color:var(--warn)}
+.controls{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-left:auto}
+.controls label{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:18px;align-items:start}
+@media (max-width:1100px){.layout{grid-template-columns:minmax(0,1fr)}}
+.tablebox{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:6px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:6px 8px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:500;background:var(--sunk);position:sticky;top:0}
+th:first-child,td:first-child{text-align:left}
+td.num{font-family:var(--f-mono);font-size:13px}
+td.muted{color:var(--muted)}
+tr.grp td{background:var(--bg);font-family:var(--f-display);font-stretch:90%;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;padding-top:12px}
+tbody tr.sku{cursor:pointer}
+tbody tr.sku:hover td{background:var(--accent-soft)}
+tbody tr.sku.sel td{background:var(--accent-soft)}
+tbody tr.sku.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+td input.price{width:76px}
+.pill{display:inline-block;min-width:58px;text-align:right;font-family:var(--f-mono);font-size:12px;padding:2px 7px;border-radius:10px}
+.pill.good{background:var(--good-soft);color:var(--good)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.bad{background:var(--bad-soft);color:var(--bad)}
+.flag{display:inline-block;margin-left:6px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;padding:1px 5px;border-radius:3px;background:var(--warn-soft);color:var(--warn);vertical-align:1px}
+.gap-neg{color:var(--bad)} .gap-pos{color:var(--good)}
+aside.detail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 80px);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+aside h2{font-family:var(--f-display);font-stretch:85%;font-weight:800;font-size:20px;margin:0}
+aside .sub{color:var(--muted);font-size:12px;margin-top:2px}
+.kv{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:13px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.kv dt.tot,.kv dd.tot{border-top:1px solid var(--line);padding-top:4px;font-weight:600;color:var(--ink)}
+.kv .sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:0}
+.stack{display:flex;height:22px;border-radius:4px;overflow:hidden;background:var(--sunk)}
+.stack div{height:100%}
+.stack-scale{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-family:var(--f-mono);margin-top:3px}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.fields label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.fields input,.fields select{width:100%;text-align:left}
+.fields input[type=number]{text-align:right}
+.section-title{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;margin:0 0 6px}
+.quote{background:var(--sunk);border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.quote .big{font-family:var(--f-mono);font-size:24px;font-weight:500}
+.quote .row{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+.sens{width:100%;font-size:12px}
+.sens th,.sens td{padding:3px 6px;position:static}
+/* assumptions */
+.alayout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start}
+@media (max-width:1000px){.alayout{grid-template-columns:minmax(0,1fr)}.asum{position:static!important;order:-1}}
+.agrid{columns:2 380px;column-gap:16px}
+.card{break-inside:avoid;margin:0 0 16px;background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden;display:flex;flex-direction:column}
+.card-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:14px 16px 10px}
+.card-h h3{font-family:var(--f-display);font-stretch:90%;font-weight:700;font-size:16px;margin:0;line-height:1.2}
+.card-h p{margin:3px 0 0;color:var(--muted);font-size:12px;line-height:1.4}
+.kres{flex:none;text-align:right;background:var(--accent-soft);color:var(--accent);border-radius:6px;padding:5px 9px;line-height:1.15}
+.kres b{display:block;font-family:var(--f-mono);font-weight:500;font-size:15px;font-variant-numeric:tabular-nums}
+.kres span{font-size:10px;text-transform:uppercase;letter-spacing:.05em;opacity:.85}
+.arows{padding:2px 16px 10px;display:flex;flex-direction:column}
+.arow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:5px 0;border-top:1px solid var(--sunk)}
+.arow:first-child{border-top:0}
+.arow label{font-size:13px;display:flex;flex-direction:column;min-width:0}
+.arow .was{font-size:11px;color:var(--accent);font-family:var(--f-mono)}
+.arow .was[hidden]{display:none}
+.ig{display:flex;align-items:stretch;flex:none;width:156px;border:1px solid var(--line);border-radius:5px;background:var(--surface);overflow:hidden}
+.ig:focus-within{outline:2px solid var(--accent);outline-offset:1px}
+.ig input::-webkit-outer-spin-button,.ig input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.ig input{-moz-appearance:textfield;appearance:textfield;border:0;border-radius:0;flex:1;min-width:0;width:auto;padding:5px 8px;outline:none;background:transparent}
+.ig .u{flex:none;min-width:46px;display:flex;align-items:center;justify-content:center;padding:0 6px;font-size:11px;color:var(--muted);background:var(--sunk);border-left:1px solid var(--line)}
+.arow.changed .ig{border-color:var(--accent)}
+.arow.changed .ig .u{background:var(--accent-soft);color:var(--accent)}
+.derived{margin:0;padding:10px 16px;background:var(--sunk);border-top:1px solid var(--line);display:grid;grid-template-columns:1fr auto;gap:3px 12px;font-size:12px}
+.derived dt{color:var(--muted)} .derived dd{margin:0;text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.asum{position:sticky;top:calc(env(safe-area-inset-top,0px) + 80px);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.asum h2{font-family:var(--f-display);font-stretch:85%;font-weight:800;font-size:19px;margin:0}
+.asum p{margin:0;color:var(--muted);font-size:12px}
+.asum .kv{font-size:13px}
+.asum .kv dt.grp{grid-column:1/-1;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin-top:8px}
+.asum .changes{font-size:12px;color:var(--muted)}
+.asum .changes b{color:var(--accent);font-weight:600}
+/* notes */
+.notes{display:flex;flex-direction:column;gap:12px;max-width:820px}
+.note{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:4px;padding:12px 16px}
+.note.bad{border-left-color:var(--bad)} .note.info{border-left-color:var(--accent)}
+.note h3{margin:0 0 4px;font-family:var(--f-display);font-stretch:90%;font-size:16px;font-weight:700}
+.note p{margin:4px 0;max-width:68ch}
+.note button{margin-top:6px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:4px;font-size:13px;z-index:20}
+footer{color:var(--muted);font-size:12px;margin-top:20px}
+@media (max-width:640px){.fx{margin-left:0}.fields{grid-template-columns:1fr}.controls{margin-left:0}}
+@media (prefers-reduced-motion:no-preference){.stack div{transition:width .25s ease}}
+.listbar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:14px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);padding:7px 12px;font-size:13px}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink)}
+.listbar .hint{color:var(--muted);font-size:12px}
+td input.price.auto{font-style:italic;color:var(--accent);border-style:dashed}
+.tag{display:inline-block;margin-left:6px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;padding:1px 5px;border-radius:3px;vertical-align:1px}
+.tag.target{background:var(--accent-soft);color:var(--accent)}
+.tag.std{background:var(--sunk);color:var(--muted)}
+.tag.deal{background:var(--good-soft);color:var(--good)}
+td.date{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.commbar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin:-4px 0 14px;padding:8px 12px;background:var(--surface);border:1px solid var(--line);border-radius:6px;font-size:13px}
+.commbar .lab{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.commbar input{width:64px}
+.commbar .state{color:var(--muted);font-size:12px}
+.commbar .state b{color:var(--accent);font-weight:600}
+td input.comm{width:58px}
+td input.comm.ov{border-color:var(--accent);color:var(--accent);font-weight:500}
+.unmatched{columns:2 220px;margin:6px 0 0;padding-left:18px}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <h1>Sarva Price Desk<small>Sarva &amp; Kellars · landed cost &amp; margin per roll, India → UK, 40HQ</small></h1>
+  <div class="fx">
+    <label for="fx-gbpinr">₹ per £ <input id="fx-gbpinr" type="number" step="0.5"></label>
+    <label for="fx-usdinr">₹ per $ <input id="fx-usdinr" type="number" step="0.5"></label>
+    <button id="btn-copy">Copy CSV</button>
+    <button id="btn-reset">Reset to sheet</button>
+  </div>
+</div></header>
+
+<div class="wrap">
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-skus" aria-selected="true" data-tab="skus">SKU margins</button>
+    <button role="tab" id="tab-assume" aria-selected="false" data-tab="assume">Cost assumptions</button>
+    <button role="tab" id="tab-notes" aria-selected="false" data-tab="notes">Sheet review<span class="count" id="notes-count">0</span></button>
+  </nav>
+
+  <main>
+    <section id="pane-skus">
+      <div class="listbar">
+        <span class="section-title" style="margin:0">Price list</span>
+        <div class="seg" id="lists" role="group" aria-label="Price list"></div>
+        <span class="hint" id="list-hint"></span>
+      </div>
+      <div class="commbar" id="commbar"></div>
+      <div class="summary">
+        <div class="stat"><b id="s-count">–</b><span id="s-count-l">SKUs</span></div>
+        <div class="stat"><b id="s-avg">–</b><span>Avg margin</span></div>
+        <div class="stat warn"><b id="s-below">–</b><span>Below target</span></div>
+        <div class="stat bad"><b id="s-loss">–</b><span>Loss-making</span></div>
+        <div class="stat" id="s-disc-box" hidden><b id="s-disc">–</b><span>Avg discount vs standard</span></div>
+        <div class="controls">
+          <label for="target">Target margin <input id="target" type="number" step="0.5" style="width:64px"> %</label>
+          <label for="filter">Show <select id="filter"></select></label>
+        </div>
+      </div>
+      <div class="layout">
+        <div class="tablebox">
+          <table id="sku-table">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <aside class="detail" id="detail"></aside>
+      </div>
+      <footer>£ per roll. Commission is set per price list; type in the Comm % column to give one SKU its own rate, or clear it to go back to the list rate. Ex-factory = foam, lamination, adhesive and polythene, before any haulage, freight or commission. Margin = profit ÷ selling price, after commission. “Price @ target” solves for the price that hits the target margin with commission recalculated on that price. Floorwise prices follow the target until you type a price. Edits are saved in this browser only.</footer>
+    </section>
+
+    <section id="pane-assume" hidden>
+      <div class="alayout">
+        <div class="agrid" id="agrid"></div>
+        <aside class="asum" id="asum"></aside>
+      </div>
+    </section>
+
+    <section id="pane-notes" hidden>
+      <div class="notes" id="notes"></div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+"use strict";
+const LAMS=["Wilkies Brown","Wilkies White","China Brown","China White","Plain NW","Printed NW","PE Film","FOIL","None"];
+
+// Assumptions: Floowise_costing.xlsx (first sheet), as entered
+const DEFAULT_A={
+  gbpinr:128, usdinr:95, fxSpread:2,
+  blockKg:180, binderPct:9, wastePct:22, scrapRate:60, binderRate:230, conversion:22,
+  rollArea:15.7,
+  adhRate:140, adhUsage:0.7,
+  polyINR:50,
+  fobINR:60000, oceanUSD:2000, oceanBuffer:2.5, ukInland:1200, payload:26000,
+  nwGsm:25, nwRate:178, printedPremium:40, nwSqm:17, nwWaste:3,
+  peGsm:20, peRate:175,
+  chinaSqm:94900, chinaBrownUSD:0.355, chinaWhiteUSD:0.375, chinaOceanUSD:1200, chinaInland:80000, chinaSqmRoll:17.5,
+  wilkLM:84330, wilkBrownGBP:0.2817, wilkWhiteGBP:0.3583, wilkOceanUSD:2000, wilkInland:60000, wilkLMRoll:11.5, wilkWaste:5,
+  foilRate:19.3, foilLen:10.5, foilWaste:5
+};
+
+// [id, group, name, density, mm, rolls, lam1, lam2, commission%, compPolyINR, foamMult, standard price (null = follow target), sheet col, sheet price, flag]
+const RAW=[
+ ["love8","Sarva","Footlove 8",70,8,650,"Printed NW","Plain NW",5,25,1,15,"B",15],
+ ["love10","Sarva","Footlove 10",70,10,570,"Printed NW","Plain NW",5,25,1,17,"C",17],
+ ["love12","Sarva","Footlove 12",70,12,470,"Printed NW","Plain NW",5,25,1,21.45,"D",20],
+ ["bliss9","Sarva","Footbliss 9",90,9,460,"China Brown","Plain NW",5,0,1,28.05,"E",28.05],
+ ["bliss11","Sarva","Footbliss 11",90,11,380,"China Brown","Plain NW",5,0,1,30.25,"F",30.25],
+ ["lux9","Sarva","Footluxe 9",120,9,440,"China White","Plain NW",5,0,1,35.2,"G",35.2],
+ ["lux11","Sarva","Footluxe 11",120,11,370,"China White","Plain NW",5,0,1,37.4,"H",37.4],
+ ["opus10","Sarva","Opus 10",145,10,400,"China White","Plain NW",5,0,1,41.25,"I",41.25],
+ ["mate8","Sarva","Footmate 8",90,8,600,"Plain NW","Plain NW",5,25,1,19.25,"M",19.25],
+ ["mate10","Sarva","Footmate 10",90,10,500,"Plain NW","Plain NW",5,25,1,22.55,"N",20.5],
+ ["work65","Sarva","Footwork 6.5",145,6.5,800,"PE Film","PE Film",5,25,1,38.5,"O",38.2],
+ ["work55","Sarva","Footwork 5.5",145,5.5,680,"PE Film","PE Film",5,25,1,35.2,"P",35.2],
+ ["board","Sarva","Footboard 3.5",145,3,1400,"FOIL","Plain NW",7.5,0,1.2,15.95,"Z",15.95],
+ ["unb8","Sarva · Unbranded","Unbranded 8",70,8,650,"Plain NW","Plain NW",2.5,25,1,14,"J",14],
+ ["unb10","Sarva · Unbranded","Unbranded 10",70,10,570,"Plain NW","Plain NW",2.5,25,1,15,"K",15],
+ ["unb12","Sarva · Unbranded","Unbranded 12",70,12,470,"Plain NW","Plain NW",2.5,25,1,19.25,"L",18.5],
+ ["fw100-8","Sarva · Floorwise","Floorwise 100D 8",100,8,500,"Wilkies Brown","Plain NW",2.5,0,1,null],
+ ["fw100-9","Sarva · Floorwise","Floorwise 100D 9",100,9,460,"Wilkies Brown","Plain NW",2.5,0,1,null],
+ ["fw100-10","Sarva · Floorwise","Floorwise 100D 10",100,10,420,"Wilkies Brown","Plain NW",2.5,0,1,null],
+ ["fw100-11","Sarva · Floorwise","Floorwise 100D 11",100,11,380,"Wilkies Brown","Plain NW",2.5,0,1,null],
+ ["fw120-8","Sarva · Floorwise","Floorwise 120D 8",120,8,470,"Wilkies White","Plain NW",2.5,0,1,null],
+ ["fw120-9","Sarva · Floorwise","Floorwise 120D 9",120,9,430,"Wilkies White","Plain NW",2.5,0,1,null],
+ ["fw120-10","Sarva · Floorwise","Floorwise 120D 10",120,10,400,"Wilkies White","Plain NW",2.5,0,1,null],
+ ["fw120-11","Sarva · Floorwise","Floorwise 120D 11",120,11,370,"Wilkies White","Plain NW",2.5,0,1,null],
+ ["fw140-8","Sarva · Floorwise","Floorwise 140D 8",140,8,460,"Wilkies White","Plain NW",2.5,0,1,null],
+ ["fw140-9","Sarva · Floorwise","Floorwise 140D 9",140,9,420,"Wilkies White","Plain NW",2.5,0,1,null],
+ ["fw140-10","Sarva · Floorwise","Floorwise 140D 10",140,10,390,"Wilkies White","Plain NW",2.5,0,1,null],
+ ["fw140-11","Sarva · Floorwise","Floorwise 140D 11",140,11,360,"Wilkies White","Plain NW",2.5,0,1,null],
+ ["fw160-8","Sarva · Floorwise","Floorwise 160D 8",160,8,450,"Wilkies White","Plain NW",2.5,0,1,null],
+ ["fw160-9","Sarva · Floorwise","Floorwise 160D 9",160,9,410,"Wilkies White","Plain NW",2.5,0,1,null],
+ ["fw160-10","Sarva · Floorwise","Floorwise 160D 10",160,10,380,"Wilkies White","Plain NW",2.5,0,1,null],
+ ["fw160-11","Sarva · Floorwise","Floorwise 160D 11",160,11,350,"Wilkies White","Plain NW",2.5,0,1,null],
+ ["primo","Kellars","Primo",70,8,650,"Printed NW","Plain NW",7.5,25.6,1,12.75,"R",15],
+ ["duo","Kellars","Duo",70,10,570,"Printed NW","Plain NW",7.5,25.6,1,14.75,"S",17],
+ ["bounce","Kellars","Bounce",90,9,460,"Wilkies Brown","Plain NW",7.5,0,1,24.68,"T",24.675],
+ ["spring","Kellars","Spring",90,11,380,"Wilkies Brown","Plain NW",7.5,0,1,27.83,"U",27.825],
+ ["bloom","Kellars","Bloom",120,9,440,"Wilkies Brown","Plain NW",7.5,0,1,33.08,"V",33.075],
+ ["pulse","Kellars","Pulse",120,11,370,"Wilkies White","Plain NW",7.5,0,1,35.18,"W",35.175],
+ ["royal","Kellars","Royal",145,10,400,"Wilkies White","Plain NW",7.5,0,1,38.33,"X",38.325],
+ ["foil","Kellars","Wood Lam (Foil)",145,3,1400,"FOIL","Plain NW",7.5,0,1.2,14.7,"Y",14.7]
+];
+function defaultSkus(){return RAW.map(r=>({id:r[0],range:r[1],name:r[2],density:r[3],mm:r[4],rolls:r[5],lam1:r[6],lam2:r[7],comm:r[8],cpoly:r[9],foamMult:r[10],std:r[11],auto:r[11]===null,col:r[12]||"",sheetPrice:r[13]??null}));}
+
+// Customer deviations: Direct_container_pricing_1.xlsx › Deviations
+function defaultCustomers(){return [
+  {id:"fnc",name:"Floors N Carpets",full:"FLOORS N CARPETS LTD",prices:{
+    bliss11:{p:27.83,d:"2026-06-21"},bliss9:{p:24.68,d:"2026-06-21"},board:{p:14.7,d:"2026-06-21"},
+    lux11:{p:35.18,d:"2026-06-21"},lux9:{p:33.08,d:"2026-06-21"},mate10:{p:20.5,d:"2025-12-20"},mate8:{p:17.5,d:"2025-12-20"},
+    work55:{p:33.6,d:"2026-06-21"},work65:{p:36.6,d:"2026-06-21"},opus10:{p:38.33,d:"2026-06-21"}}}
+];}
+
+const KEY="floorwise-price-desk-v2";
+function fresh(){return {aVer:2,commissions:{std:{all:null,by:{}},fnc:{all:null,by:{}}},A:Object.assign({},DEFAULT_A),skus:defaultSkus(),customers:defaultCustomers(),target:15,sel:"bliss9",filter:"all",cfilter:"deals",list:"std",tab:"skus"};}
+let state=load();
+function load(){
+  try{const s=JSON.parse(localStorage.getItem(KEY)||"null");
+    if(s&&s.A&&s.skus&&s.customers){const f=fresh();const m=Object.assign(f,s,{A:Object.assign({},DEFAULT_A,s.aVer===2?s.A:{}),aVer:2});m.customers=m.customers.filter(c=>c.id!=="furlong");if(m.list==="furlong")m.list="std";return m;}
+  }catch(e){}
+  return fresh();
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
+
+// ---------- the cost model (mirrors the Pricing sheet) ----------
+function derive(A){
+  const g=A.gbpinr, usdgbp=A.usdinr/A.gbpinr, frx=A.usdinr+A.fxSpread;
+  const binder=A.blockKg*A.binderPct/100, waste=A.blockKg*A.wastePct/100;
+  const scrapFresh=A.blockKg-binder-waste;
+  const rmc=(scrapFresh*A.scrapRate+binder*A.binderRate)/(A.blockKg-waste);
+  const foamINR=rmc+A.conversion, foamGBP=foamINR/g;
+  const nwUse=A.nwGsm*A.nwSqm*(1+A.nwWaste/100)/1000;
+  const peUse=A.peGsm*A.nwSqm*(1+A.nwWaste/100)/1000;
+  const china=usd=>((A.chinaSqm*usd*A.usdinr+A.chinaOceanUSD*frx+A.chinaInland)/A.chinaSqm)/g*A.chinaSqmRoll;
+  const wilk=gbp=>((A.wilkLM*gbp*g+A.wilkOceanUSD*frx+A.wilkInland)/A.wilkLM)/g*A.wilkLMRoll*(1+A.wilkWaste/100);
+  const lam={
+    "Plain NW":nwUse*A.nwRate/g, "Printed NW":nwUse*(A.nwRate+A.printedPremium)/g, "PE Film":peUse*A.peRate/g,
+    "China Brown":china(A.chinaBrownUSD), "China White":china(A.chinaWhiteUSD),
+    "Wilkies Brown":wilk(A.wilkBrownGBP), "Wilkies White":wilk(A.wilkWhiteGBP),
+    "FOIL":A.foilRate*A.foilLen*(1+A.foilWaste/100)/g, "None":0
+  };
+  return {rmc,foamINR,foamGBP,lam,adh:A.adhRate*A.adhUsage/g,poly:A.polyINR/g,
+    haulCtr:A.fobINR/g, oceanCtr:A.oceanUSD*(1+A.oceanBuffer/100)*usdgbp, ukCtr:A.ukInland, usdgbp};
+}
+function exCost(s,A,D){
+  const rolls=Math.max(1,s.rolls||1), weight=s.density*s.mm*A.rollArea/1000, c={};
+  c.foam=weight*D.foamGBP*(s.foamMult||1);
+  c.lam=(D.lam[s.lam1]||0)+(D.lam[s.lam2]||0);
+  c.adh=D.adh+(s.lam2==="None"?0:D.adh);
+  c.pack=D.poly+(s.cpoly||0)/A.gbpinr;
+  c.haul=D.haulCtr/rolls; c.ocean=D.oceanCtr/rolls; c.uk=D.ukCtr/rolls;
+  return {c,weight,ex:c.foam+c.lam+c.adh+c.pack+c.haul+c.ocean+c.uk};
+}
+function targetPrice(s,A,D,m){const d=1-s.comm/100-m/100;return d>0?exCost(s,A,D).ex/d:NaN;}
+function CLof(list){if(!state.commissions)state.commissions={};return state.commissions[list]||(state.commissions[list]={all:null,by:{}});}
+function commOf(s,list){const L=CLof(list); if(L.by[s.id]!=null)return L.by[s.id]; if(L.all!=null)return L.all; return list==="std"?s.comm:commOf(s,"std");}
+function S(s,list){return Object.assign({},s,{comm:commOf(s,list)});}
+function stdPrice(s,A,D){return s.auto?targetPrice(S(s,"std"),A,D,state.target):s.std;}
+function listPrice(s,list,A,D){
+  if(list!=="std"){const cu=state.customers.find(c=>c.id===list); const dv=cu&&cu.prices[s.id]; if(dv)return {p:dv.p,src:"deal",d:dv.d};}
+  return {p:stdPrice(s,A,D),src:s.auto?"target":"std"};
+}
+function cost(s,A,D,price){
+  const e=exCost(s,A,D), c=Object.assign({},e.c);
+  c.comm=price*s.comm/100;
+  const total=e.ex+c.comm, profit=price-total;
+  return {c,ex:e.ex,exf:e.c.foam+e.c.lam+e.c.adh+e.c.pack,total,profit,margin:price?profit/price:0,weight:e.weight,price,target:m=>{const d=1-s.comm/100-m/100;return d>0?e.ex/d:NaN;}};
+}
+
+// ---------- formatting ----------
+const gbp=v=>isFinite(v)?(v<0?"−£":"£")+Math.abs(v).toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2}):"—";
+const n2=v=>isFinite(v)?v.toFixed(2):"—";
+const pct=v=>isFinite(v)?(v*100).toFixed(1)+"%":"—";
+const esc=s=>String(s).replace(/[&<>"]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
+const fdate=d=>{const [y,m,dd]=d.split("-");return `${+dd} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m-1]} ${y.slice(2)}`;};
+function mClass(m){const t=state.target/100-1e-9; return m<0?"bad":(m<t?"warn":"good");}
+const isStd=()=>state.list==="std";
+const cust=()=>state.customers.find(c=>c.id===state.list);
+
+// ---------- list switcher ----------
+function renderLists(){
+  const lists=[{id:"std",name:"Standard"}].concat(state.customers);
+  document.getElementById("lists").innerHTML=lists.map(l=>`<button data-l="${l.id}" aria-pressed="${l.id===state.list}">${esc(l.name)}${l.id!=="std"?` <span class="muted">(${Object.keys(l.prices).length})</span>`:""}</button>`).join("");
+  const cu=cust();
+  document.getElementById("list-hint").textContent=cu?`Agreed prices for ${cu.full}. SKUs without a deal fall back to standard.`:"Direct container price list, Sarva and Kellars.";
+  const f=document.getElementById("filter");
+  f.innerHTML=isStd()?`<option value="all">All SKUs</option><option value="below">Below target</option><option value="loss">Loss-making</option>`
+    :`<option value="deals">Agreed prices only</option><option value="all">All SKUs</option><option value="below">Below target</option><option value="loss">Loss-making</option>`;
+  f.value=isStd()?state.filter:state.cfilter;
+  renderCommBar();
+}
+document.getElementById("lists").addEventListener("click",e=>{const b=e.target.closest("button[data-l]");if(!b)return;state.list=b.dataset.l;save();renderLists();renderTable();renderDetail();});
+
+// ---------- commission bar ----------
+let commScope="all";
+function renderCommBar(){
+  const L=CLof(state.list), std=isStd(), name=std?"Standard":cust().name;
+  const groups=[...new Set(state.skus.map(s=>s.range))];
+  const nOv=Object.keys(L.by).length;
+  let st;
+  if(L.all!=null) st=`<b>${L.all}%</b> on every SKU`+(nOv?`, <b>${nOv}</b> set individually`:"");
+  else if(nOv) st=std?`Sheet rates, <b>${nOv}</b> changed`:`Same as Standard, <b>${nOv}</b> changed`;
+  else st=std?"Sheet rates (2.5–7.5% by SKU)":"Same as Standard";
+  const custom=L.all!=null||nOv;
+  document.getElementById("commbar").innerHTML=`<span class="lab">Commission · ${esc(name)}</span>
+    <label for="comm-all" style="display:flex;gap:6px;align-items:center">Set <input id="comm-all" type="number" step="0.5" min="0" value="${L.all??""}" placeholder="%"> %</label>
+    <label for="comm-scope" style="display:flex;gap:6px;align-items:center">for <select id="comm-scope"><option value="all">all ${state.skus.length} SKUs</option>${groups.map(g=>`<option value="${esc(g)}"${commScope===g?" selected":""}>${esc(g)}</option>`).join("")}</select></label>
+    <button class="primary" id="comm-apply">Apply</button>
+    <span class="state">${st}</span>
+    ${custom?`<button id="comm-clear">${std?"Use sheet rates":"Same as Standard"}</button>`:""}`;
+  if(commScope!=="all")document.getElementById("comm-scope").value=commScope;
+  document.getElementById("comm-scope").addEventListener("change",e=>{commScope=e.target.value;});
+  const apply=()=>{const v=parseFloat(document.getElementById("comm-all").value); if(!isFinite(v)||v<0){toast("Enter a commission % first");return;}
+    if(commScope==="all"){L.all=v;L.by={};toast(`${name}: ${v}% commission on all SKUs. Edit single SKUs in the Comm % column.`);}
+    else{const g=state.skus.filter(s=>s.range===commScope); g.forEach(s=>L.by[s.id]=v); toast(`${name}: ${v}% commission on ${g.length} ${commScope} SKUs`);}
+    save(); renderCommBar(); renderTable(); renderDetail(); renderNotes();};
+  document.getElementById("comm-apply").addEventListener("click",apply);
+  document.getElementById("comm-all").addEventListener("keydown",e=>{if(e.key==="Enter")apply();});
+  const c=document.getElementById("comm-clear");
+  if(c)c.addEventListener("click",()=>{L.all=null;L.by={};save();renderCommBar();renderTable();renderDetail();renderNotes();toast(std?"Back to the sheet’s commission rates":"Commission follows Standard again");});
+}
+
+// ---------- SKU tab ----------
+const thead=document.querySelector("#sku-table thead"), tbody=document.querySelector("#sku-table tbody");
+function renderTable(){
+  const A=state.A,D=derive(A),std=isStd(),cu=cust(),filt=std?state.filter:state.cfilter;
+  thead.innerHTML=std?`<tr><th>SKU</th><th>Density</th><th>mm</th><th>Rolls/ctr</th><th>Comm %</th><th>Price £</th><th>Ex-factory £</th><th>Landed £</th><th>Profit £</th><th>Margin</th><th>Price @ target</th><th>Gap £</th></tr>`
+    :`<tr><th>SKU</th><th>Density</th><th>mm</th><th>Since</th><th>Comm %</th><th>Standard £</th><th>Agreed £</th><th>Discount</th><th>Ex-factory £</th><th>Landed £</th><th>Profit £</th><th>Margin</th><th>Margin at std</th><th>Gap £</th></tr>`;
+  const cols=std?12:14;
+  const commTd=s=>`<td class="num"><input class="comm${CL.by[s.id]!=null?" ov":""}" type="number" step="0.5" min="0" id="comm-${s.id}" data-id="${s.id}" value="${s.comm}" aria-label="Commission % ${esc(s.name)}" title="${CL.by[s.id]!=null?"Set for this SKU. Clear to use the list rate.":"List rate"}"></td>`;
+  let rows="",last="",cnt=0,sum=0,below=0,loss=0,disc=0,nd=0;
+  const CL=CLof(state.list);
+  for(const s0 of state.skus){
+    const s=S(s0,state.list), lp=listPrice(s,state.list,A,D), r=cost(s,A,D,lp.p), tp=r.target(state.target), gap=lp.p-tp;
+    if(filt==="deals"&&lp.src!=="deal")continue;
+    if(filt==="below"&&r.margin>=state.target/100-1e-9)continue;
+    if(filt==="loss"&&r.profit>=0)continue;
+    cnt++; sum+=r.margin; if(r.margin<state.target/100-1e-9)below++; if(r.profit<0)loss++;
+    if(s.range!==last){rows+=`<tr class="grp"><td colspan="${cols}">${esc(s.range)}</td></tr>`;last=s.range;}
+    const tag=lp.src==="target"?`<span class="tag target">= target</span>`:"";
+    const gapTd=`<td class="num ${gap<-0.005?"gap-neg":"gap-pos"}">${isFinite(gap)?(gap>=0?"+":"")+gap.toFixed(2):"—"}</td>`;
+    const common=`<td>${esc(s.name)}${tag}</td><td class="num muted">${s.density}</td><td class="num muted">${s.mm}</td>`;
+    const priceVal=lp.src==="target"?lp.p.toFixed(2):lp.p;
+    if(std){
+      rows+=`<tr class="sku${s.id===state.sel?" sel":""}" data-id="${s.id}" tabindex="0">${common}<td class="num muted">${s.rolls}</td>${commTd(s)}
+      <td class="num"><input class="price${lp.src==="target"?" auto":""}" type="number" step="0.05" id="price-${s.id}" data-id="${s.id}" value="${priceVal}" aria-label="Standard price ${esc(s.name)}"></td>
+      <td class="num muted">${n2(r.exf)}</td><td class="num">${n2(r.total)}</td><td class="num ${r.profit<0?"gap-neg":""}">${n2(r.profit)}</td>
+      <td><span class="pill ${mClass(r.margin)}">${pct(r.margin)}</span></td><td class="num">${n2(tp)}</td>${gapTd}</tr>`;
+    }else{
+      const sp=stdPrice(s0,A,D), rs=cost(S(s0,"std"),A,D,sp), d=sp?(sp-lp.p)/sp:0;
+      if(lp.src==="deal"){disc+=d;nd++;}
+      rows+=`<tr class="sku${s.id===state.sel?" sel":""}" data-id="${s.id}" tabindex="0">${common}
+      <td class="date">${lp.d?fdate(lp.d):""}</td>${commTd(s)}
+      <td class="num muted">${n2(sp)}</td>
+      <td class="num"><input class="price${lp.src!=="deal"?" auto":""}" type="number" step="0.05" id="cprice-${s.id}" data-id="${s.id}" value="${lp.src==="deal"?lp.p:""}" placeholder="${n2(lp.p)}" aria-label="Agreed price ${esc(s.name)}"></td>
+      <td class="num">${lp.src==="deal"?"−"+(d*100).toFixed(1)+"%":"<span class=\"muted\">std</span>"}</td>
+      <td class="num muted">${n2(r.exf)}</td><td class="num">${n2(r.total)}</td><td class="num ${r.profit<0?"gap-neg":""}">${n2(r.profit)}</td>
+      <td><span class="pill ${mClass(r.margin)}">${pct(r.margin)}</span></td>
+      <td class="num muted">${pct(rs.margin)}</td>${gapTd}</tr>`;
+    }
+  }
+  tbody.innerHTML=rows||`<tr><td colspan="${cols}" style="text-align:left;padding:16px">No SKUs match this filter.</td></tr>`;
+  document.getElementById("s-count").textContent=cnt;
+  document.getElementById("s-count-l").textContent=std?"SKUs":(filt==="deals"?"Agreed prices":"SKUs");
+  document.getElementById("s-avg").textContent=cnt?pct(sum/cnt):"—";
+  document.getElementById("s-below").textContent=below;
+  document.getElementById("s-loss").textContent=loss;
+  document.getElementById("s-disc-box").hidden=std||!nd;
+  document.getElementById("s-disc").textContent=nd?"−"+(disc/nd*100).toFixed(1)+"%":"—";
+}
+tbody.addEventListener("click",e=>{
+  if(e.target.closest("input"))return;
+  const tr=e.target.closest("tr.sku"); if(!tr)return; state.sel=tr.dataset.id; save(); renderTable(); renderDetail();
+});
+tbody.addEventListener("keydown",e=>{const tr=e.target.closest("tr.sku");if(tr&&e.target===tr&&(e.key==="Enter"||e.key===" ")){e.preventDefault();tr.click();}});
+tbody.addEventListener("change",e=>{
+  const ci=e.target.closest("input.comm");
+  if(ci){const L=CLof(state.list), v=parseFloat(ci.value);
+    if(ci.value.trim()==="")delete L.by[ci.dataset.id]; else if(isFinite(v)&&v>=0)L.by[ci.dataset.id]=v; else return;
+    state.sel=ci.dataset.id; save(); renderCommBar(); renderTable(); renderDetail(); renderNotes(); return;}
+  const inp=e.target.closest("input.price"); if(!inp)return;
+  const s=state.skus.find(x=>x.id===inp.dataset.id); const raw=inp.value.trim(); const v=parseFloat(raw);
+  if(isStd()){
+    if(raw===""&&s.std===null){s.auto=true;}
+    else if(raw===""&&s.std!==null){return;}
+    else if(isFinite(v)){s.std=v;s.auto=false;}
+  }else{
+    const cu=cust();
+    if(raw===""){delete cu.prices[s.id];}
+    else if(isFinite(v)){cu.prices[s.id]={p:v,d:(cu.prices[s.id]&&cu.prices[s.id].d)||new Date().toISOString().slice(0,10)};}
+    renderLists();
+  }
+  state.sel=s.id; save(); renderTable(); renderDetail(); renderNotes();
+});
+
+const SEG=[["foam","Foam","--foam"],["lam","Lamination","--lam"],["adh","Adhesive","--adh"],["pack","Polythene","--pack"],["haul","India haulage","--log"],["ocean","Ocean freight","--log"],["uk","UK inland","--log"],["comm","Commission","--comm"]];
+let quoteMode="margin", quoteVal=null, ctrs=1;
+function renderDetail(){
+  const box=document.getElementById("detail");
+  const s0=state.skus.find(x=>x.id===state.sel)||state.skus[0]; if(!s0){box.innerHTML="";return;}
+  const s=S(s0,state.list);
+  const A=state.A,D=derive(A),lp=listPrice(s,state.list,A,D),r=cost(s,A,D,lp.p);
+  const scale=Math.max(r.price,r.total);
+  let bar="";
+  for(const [k,,v] of SEG){const w=r.c[k]/scale*100; if(w>0) bar+=`<div style="width:${w}%;background:var(${v});opacity:${k==="ocean"?.8:k==="uk"?.6:1}"></div>`;}
+  if(r.profit>0) bar+=`<div style="width:${r.profit/scale*100}%;background:var(--profit)"></div>`;
+  let kv="";
+  for(const [k,l,v] of SEG){kv+=`<dt><span class="sw" style="background:var(${v})"></span>${l}</dt><dd>${n2(r.c[k])}</dd>`; if(k==="pack")kv+=`<dt class="tot">Ex-factory cost</dt><dd class="tot">${gbp(r.exf)}</dd>`;}
+  kv+=`<dt class="tot">Landed cost</dt><dd class="tot">${gbp(r.total)}</dd>`;
+  kv+=`<dt><span class="sw" style="background:var(${r.profit<0?"--loss":"--profit"})"></span>Profit</dt><dd class="${r.profit<0?"gap-neg":""}">${gbp(r.profit)} · ${pct(r.margin)}</dd>`;
+  const ctrKg=r.weight*s.rolls;
+  const opt=v=>LAMS.map(o=>`<option${o===v?" selected":""}>${o}</option>`).join("");
+  // all price lists for this SKU
+  let lists=`<dt>Standard${s.auto?" (= target)":""}</dt><dd>${gbp(stdPrice(s,A,D))} · ${pct(cost(S(s0,"std"),A,D,stdPrice(s0,A,D)).margin)}</dd>`;
+  for(const cu of state.customers){const dv=cu.prices[s.id]; if(dv){lists+=`<dt>${esc(cu.name)}</dt><dd>${gbp(dv.p)} · ${pct(cost(S(s0,cu.id),A,D,dv.p).margin)}</dd>`;}}
+  const qv = quoteVal ?? (quoteMode==="margin"?state.target:+lp.p.toFixed(2));
+  const qPrice = quoteMode==="margin"? r.target(qv) : qv;
+  const q=cost(s,A,D,qPrice);
+  let sens="";
+  for(const d of [-8,-4,0,4,8]){
+    const A2=Object.assign({},A,{gbpinr:A.gbpinr+d}); const r2=cost(s,A2,derive(A2),lp.p);
+    sens+=`<tr><td class="num">${(A.gbpinr+d).toFixed(1)}</td><td class="num">${n2(r2.total)}</td><td><span class="pill ${mClass(r2.margin)}">${pct(r2.margin)}</span></td></tr>`;
+  }
+  const listName=isStd()?"standard price":esc(cust().name)+(lp.src==="deal"?" price":" (standard)");
+  box.innerHTML=`
+   <div><h2>${esc(s.name)}</h2>
+   <div class="sub">${s.range} · ${s.density} kg/m³ · ${s.mm} mm · ${s.lam1} + ${s.lam2} · ${s.comm}% commission</div></div>
+   <div><p class="section-title">Where the ${listName} of ${gbp(lp.p)} goes</p>
+     <div class="stack" role="img" aria-label="Cost stack against price">${bar}</div>
+     <div class="stack-scale"><span>£0</span><span>${gbp(scale)}</span></div></div>
+   <dl class="kv">${kv}</dl>
+   <div><p class="section-title">Price lists</p><dl class="kv">${lists}</dl></div>
+   <div class="quote">
+     <p class="section-title" style="margin:0">Quote</p>
+     <div class="row">
+       <label for="q-mode"><select id="q-mode"><option value="margin"${quoteMode==="margin"?" selected":""}>Target margin %</option><option value="price"${quoteMode==="price"?" selected":""}>Price £/roll</option></select></label>
+       <input id="q-val" type="number" step="${quoteMode==="margin"?0.5:0.05}" value="${+(+qv).toFixed(3)}" aria-label="Quote value">
+       <label for="q-ctrs" style="font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center">Containers <input id="q-ctrs" type="number" min="1" step="1" value="${ctrs}" style="width:56px"></label>
+     </div>
+     <div class="row"><span class="big">${gbp(qPrice)}</span><span class="muted">/roll · ${gbp(qPrice/A.rollArea)}/m² · <span class="pill ${mClass(q.margin)}">${pct(q.margin)}</span></span></div>
+     <dl class="kv">
+       <dt>Markup on cost</dt><dd>${pct(q.profit/q.total)}</dd>
+       <dt>Revenue (${ctrs} × ${s.rolls} rolls)</dt><dd>${gbp(qPrice*s.rolls*ctrs)}</dd>
+       <dt>Profit</dt><dd class="${q.profit<0?"gap-neg":""}">${gbp(q.profit*s.rolls*ctrs)}</dd>
+       <dt>Commission paid</dt><dd>${gbp(q.c.comm*s.rolls*ctrs)}</dd>
+     </dl>
+     <div><p class="section-title">If the pound moves (₹ per £), at ${gbp(lp.p)}</p>
+     <table class="sens"><thead><tr><th>₹/£</th><th>Landed £</th><th>Margin</th></tr></thead><tbody>${sens}</tbody></table></div>
+   </div>
+   <div><p class="section-title">Spec</p>
+   <div class="fields">
+     <label for="f-density">Density kg/m³<input id="f-density" type="number" step="1" data-k="density" value="${s.density}"></label>
+     <label for="f-mm">Thickness mm<input id="f-mm" type="number" step="0.5" data-k="mm" value="${s.mm}"></label>
+     <label for="f-rolls">Rolls / container<input id="f-rolls" type="number" step="10" data-k="rolls" value="${s.rolls}"></label>
+     <label for="f-comm">Commission %<input id="f-comm" type="number" step="0.5" data-k="comm" value="${s.comm}"></label>
+     <label for="f-lam1">Lamination 1<select id="f-lam1" data-k="lam1">${opt(s.lam1)}</select></label>
+     <label for="f-lam2">Lamination 2<select id="f-lam2" data-k="lam2">${opt(s.lam2)}</select></label>
+     <label for="f-cpoly">Compression poly ₹<input id="f-cpoly" type="number" step="1" data-k="cpoly" value="${s.cpoly}"></label>
+     <label for="f-foam">Foam multiplier<input id="f-foam" type="number" step="0.05" data-k="foamMult" value="${s.foamMult}"></label>
+   </div></div>
+   <dl class="kv">
+     <dt>Roll weight</dt><dd>${r.weight.toFixed(2)} kg</dd>
+     <dt>Container payload</dt><dd>${Math.round(ctrKg).toLocaleString()} / ${A.payload.toLocaleString()} kg</dd>
+     <dt>Logistics per roll</dt><dd>${gbp(r.c.haul+r.c.ocean+r.c.uk)}</dd>
+   </dl>`;
+  box.querySelectorAll(".fields [data-k]").forEach(el=>el.addEventListener("change",()=>{
+    const k=el.dataset.k, v=el.tagName==="SELECT"?el.value:parseFloat(el.value)||0;
+    if(k==="comm"){CLof(state.list).by[s0.id]=v; renderCommBar();} else s0[k]=v;
+    save(); renderTable(); renderDetail();
+  }));
+  box.querySelector("#q-mode").addEventListener("change",e=>{quoteMode=e.target.value;quoteVal=null;renderDetail();});
+  box.querySelector("#q-val").addEventListener("change",e=>{quoteVal=parseFloat(e.target.value);renderDetail();});
+  box.querySelector("#q-ctrs").addEventListener("change",e=>{ctrs=Math.max(1,parseInt(e.target.value)||1);renderDetail();});
+}
+
+// ---------- assumptions tab ----------
+const GROUPS=[
+ {t:"Foam block (rebonded)",h:"India block cost sheet. Waste is recycled, so cost is spread over the good kg.",
+   f:[["blockKg","Block weight","kg"],["binderPct","Binder share","%"],["wastePct","Waste / rebonded","%"],["scrapRate","Foam scrap rate","₹/kg"],["binderRate","Binder rate","₹/kg"],["conversion","Factory conversion","₹/kg"],["rollArea","Roll area","m²"]],
+   k:D=>[gbp(D.foamGBP),"foam / kg"], d:D=>[["Raw material cost",D.rmc.toFixed(2)+" ₹/kg"],["Foam rate incl. conversion",D.foamINR.toFixed(2)+" ₹/kg"]]},
+ {t:"Container & freight (40HQ)",h:"Per container, spread over each SKU’s rolls.",
+   f:[["fobINR","India haulage / FOB","₹"],["oceanUSD","Ocean freight","$"],["oceanBuffer","Ocean buffer","%"],["ukInland","UK inland","£"],["payload","Max payload","kg"]],
+   k:D=>[gbp(D.haulCtr+D.oceanCtr+D.ukCtr),"per container"], d:D=>[["India haulage",gbp(D.haulCtr)],["Ocean freight",gbp(D.oceanCtr)],["UK inland",gbp(D.ukCtr)]]},
+ {t:"Adhesive & packing",h:"Adhesive applies once per laminated side.",
+   f:[["adhRate","Adhesive rate","₹/kg"],["adhUsage","Adhesive per side","kg"],["polyINR","Polythene per roll","₹"]],
+   k:D=>[gbp(D.adh),"adhesive / side"], d:D=>[["Polythene per roll",gbp(D.poly)]]},
+ {t:"Exchange rates",h:"USD freight converts at ₹/$ plus the spread.",
+   f:[["gbpinr","₹ per £","₹"],["usdinr","₹ per $","₹"],["fxSpread","Freight FX spread","₹"]],
+   k:D=>[D.usdgbp.toFixed(4),"£ per $"], d:null},
+ {t:"Non-woven & PE film",h:"Usage = GSM × area × (1 + wastage), per side.",
+   f:[["nwGsm","Non-woven GSM","g/m²"],["nwRate","Plain NW rate","₹/kg"],["printedPremium","Printed premium","₹/kg"],["peGsm","PE film GSM","g/m²"],["peRate","PE film rate","₹/kg"],["nwSqm","Area per side","m²"],["nwWaste","Wastage","%"]],
+   k:D=>[gbp(D.lam["Plain NW"]),"plain NW / side"], d:D=>[["Printed NW per side",gbp(D.lam["Printed NW"])],["PE film per side",gbp(D.lam["PE Film"])]]},
+ {t:"China paper",h:"Shipment cost spread per m², then per roll.",
+   f:[["chinaSqm","Shipment size","m²"],["chinaBrownUSD","Brown price","$/m²"],["chinaWhiteUSD","White price","$/m²"],["chinaOceanUSD","Ocean freight","$"],["chinaInland","India inland","₹"],["chinaSqmRoll","Paper per roll","m²"]],
+   k:D=>[gbp(D.lam["China Brown"]),"brown / roll"], d:D=>[["China White per roll",gbp(D.lam["China White"])]]},
+ {t:"Wilkies paper",h:"Priced per linear metre in £, shipped to India.",
+   f:[["wilkLM","Shipment size","LM"],["wilkBrownGBP","Brown price","£/LM"],["wilkWhiteGBP","White price","£/LM"],["wilkOceanUSD","Ocean freight","$"],["wilkInland","India inland","₹"],["wilkLMRoll","Paper per roll","LM"],["wilkWaste","Wastage","%"]],
+   k:D=>[gbp(D.lam["Wilkies Brown"]),"brown / roll"], d:D=>[["Wilkies White per roll",gbp(D.lam["Wilkies White"])]]},
+ {t:"Foil",h:"Footboard and Kellars Wood Lam.",
+   f:[["foilRate","Foil rate","₹/m"],["foilLen","Foil per roll","m"],["foilWaste","Wastage","%"]],
+   k:D=>[gbp(D.lam["FOIL"]),"foil / roll"], d:null}
+];
+const fmtIn=v=>String(+(+v).toFixed(4));
+function buildAssume(){
+  document.getElementById("agrid").innerHTML=GROUPS.map((g,gi)=>`<div class="card">
+    <div class="card-h"><div><h3>${g.t}</h3><p>${g.h}</p></div><div class="kres" id="kres-${gi}"><b></b><span></span></div></div>
+    <div class="arows">${g.f.map(([k,l,u])=>`<div class="arow" id="row-${k}"><label for="a-${k}">${l}<span class="was" hidden>sheet ${fmtIn(DEFAULT_A[k])}</span></label>
+      <div class="ig"><input id="a-${k}" type="number" step="any" data-k="${k}" value="${state.A[k]}"><span class="u">${u}</span></div></div>`).join("")}</div>
+    ${g.d?`<dl class="derived" id="der-${gi}"></dl>`:""}</div>`).join("");
+}
+function renderAssume(){
+  const D=derive(state.A), A=state.A;
+  if(!document.getElementById("kres-0"))buildAssume();
+  GROUPS.forEach((g,gi)=>{
+    const [v,l]=g.k(D), kr=document.getElementById("kres-"+gi); kr.querySelector("b").textContent=v; kr.querySelector("span").textContent=l;
+    if(g.d)document.getElementById("der-"+gi).innerHTML=g.d(D).map(([a,b])=>`<dt>${a}</dt><dd>${b}</dd>`).join("");
+    g.f.forEach(([k])=>{const row=document.getElementById("row-"+k), ch=A[k]!==DEFAULT_A[k], inp=row.querySelector("input");
+      row.classList.toggle("changed",ch); row.querySelector(".was").hidden=!ch;
+      if(document.activeElement!==inp&&parseFloat(inp.value)!==A[k])inp.value=A[k];});
+  });
+  const changed=Object.keys(DEFAULT_A).filter(k=>A[k]!==DEFAULT_A[k]).length;
+  const L=D.lam;
+  document.getElementById("asum").innerHTML=`<div><h2>What these add up to</h2><p>Unit costs every SKU is built from. Updates as you type.</p></div>
+   <dl class="kv">
+     <dt class="grp">Foam</dt><dt>Foam rate</dt><dd>${gbp(D.foamGBP)}/kg</dd><dt>In rupees</dt><dd>₹${D.foamINR.toFixed(2)}/kg</dd>
+     <dt class="grp">Per side</dt><dt>Plain non-woven</dt><dd>${gbp(L["Plain NW"])}</dd><dt>Printed non-woven</dt><dd>${gbp(L["Printed NW"])}</dd><dt>PE film</dt><dd>${gbp(L["PE Film"])}</dd><dt>Adhesive</dt><dd>${gbp(D.adh)}</dd>
+     <dt class="grp">Per roll</dt><dt>Wilkies Brown</dt><dd>${gbp(L["Wilkies Brown"])}</dd><dt>Wilkies White</dt><dd>${gbp(L["Wilkies White"])}</dd><dt>China Brown</dt><dd>${gbp(L["China Brown"])}</dd><dt>China White</dt><dd>${gbp(L["China White"])}</dd><dt>Foil</dt><dd>${gbp(L["FOIL"])}</dd><dt>Polythene</dt><dd>${gbp(D.poly)}</dd>
+     <dt class="grp">Per container</dt><dt>Haulage + ocean + UK</dt><dd>${gbp(D.haulCtr+D.oceanCtr+D.ukCtr)}</dd>
+   </dl>
+   <div class="changes">${changed?`<b>${changed} changed</b> from the sheet, outlined in blue.`:"All values match the sheet."}</div>
+   <button id="btn-areset"${changed?"":" disabled"}>Reset assumptions</button>`;
+  document.getElementById("btn-areset").addEventListener("click",()=>{state.A=Object.assign({},DEFAULT_A);save();renderAll();toast("Assumptions reset to the sheet");});
+}
+document.getElementById("agrid").addEventListener("input",e=>{
+  const k=e.target.dataset.k; if(!k)return; const v=parseFloat(e.target.value); if(!isFinite(v)||(["gbpinr","usdinr","blockKg","wilkLM","chinaSqm"].includes(k)&&v<=0))return;
+  state.A[k]=v; save(); syncFx(); renderAssume(); renderTable(); renderDetail(); renderNotes();
+});
+
+// ---------- review notes ----------
+function renderNotes(){
+  const A=state.A,D=derive(A);
+  const fw=state.skus.filter(s=>s.range==="Sarva · Floorwise");
+  const fwr=fw.map(s=>stdPrice(s,A,D));
+  const diffs=state.skus.filter(s=>s.sheetPrice!=null&&s.std!=null&&Math.abs(s.sheetPrice-s.std)>0.006);
+  const fnc=state.customers.find(c=>c.id==="fnc");
+  const fncRows=fnc?Object.entries(fnc.prices).map(([id,v])=>{const s=state.skus.find(x=>x.id===id);return s?{s,r:cost(S(s,"fnc"),A,D,v.p)}:null;}).filter(Boolean):[];
+  const fncLow=fncRows.filter(x=>x.r.margin<state.target/100);
+  const notes=[
+   {cls:"info",h:"Where the numbers come from",p:[
+     "SKU specs: Cost Sheet UK 2, “Pricing Model UK (3)”, taken as entered. Cost assumptions: the first sheet (Floowise costing): foam scrap ₹60/kg, binder ₹230/kg, conversion ₹22/kg, adhesive 0.7 kg per side, polythene ₹50 and UK inland £1,200. Cost Sheet UK 2 used ₹40, ₹225, ₹20, 0.45 kg, ₹40 and £1,400, which lowers landed cost.",
+     "Standard prices: Direct container pricing, “Standard Prices”. Customer prices: the “Deviations” sheet, kept as separate price lists."]},
+   {h:"Floorwise is priced at the target margin for now",p:[
+     `Floorwise is not in the new cost sheet, so its 16 SKUs use the specs from the first sheet (Wilkies backings, 2.5% commission, its rolls per container). Their standard price follows the target margin (now ${state.target}%), from ${gbp(Math.min(...fwr))} to ${gbp(Math.max(...fwr))}. Type a price in the table to replace it; clear the box to go back to target.`]},
+   {h:"Price list differs from the cost sheet’s selling price",p:[
+     "The tool uses the price list. These SKUs had a different selling price in the cost sheet:",
+     diffs.map(s=>`${esc(s.name)}: sheet ${gbp(s.sheetPrice)}, price list ${gbp(s.std)}`).join(" · ")]},
+   {cls:fncLow.length?"bad":"",h:`Floors N Carpets: ${fncLow.length} of ${fncRows.length} agreed prices are below target`,p:[
+     fncRows.map(x=>`${esc(x.s.name)} ${pct(x.r.margin)}`).join(" · "),
+     "Footmate 8 and 10 were agreed in Dec 2025; the rest from 21 Jun 2026."]},
+   {h:"Assumed matches between the two files",p:[
+     "Kellars “FOIL” in the cost sheet is matched to “WOOD LAM” in the price list (both £14.70). Opus is listed twice in the price list (Footopus 10 and Opus 10, both £41.25); one SKU is used. Footboard is listed as 3.5 but the cost sheet costs it at 3 mm, kept as entered."]},
+   {cls:"info",h:"On the price list but not in the cost sheet",p:[
+     "These have a standard price but no cost spec, so the tool cannot show a margin for them. Send their density, thickness, backing and rolls per container and I can add them:",
+     "<ul class=\"unmatched\"><li>B grade (£10.00)</li><li>Max (£38.50)</li><li>StepAcclaim (£18.50)</li><li>StepPrestige (£16.50)</li><li>Stepeco Green (£22.00)</li><li>Stepezy Red (£18.00)</li><li>Steplight White (£16.50)</li><li>Steplux Blue (£18.00)</li><li>Stepmax Gold (£16.00)</li><li>Stepsmart Orange (£15.50)</li><li>Stepsupreme (£18.50)</li><li>Unbranded 9 (£14.00)</li><li>Kellars Solo (£17.85)</li><li>Kellars Spirit (£19.95)</li><li>Kellars Blue 8 (£13.39)</li><li>Kellars Red 10mm (£15.49)</li></ul>"]},
+   {cls:"info",h:"Fixed since the first sheet",p:["Kellars Bloom and Pulse now take rolls per container from the matching Footluxe 9 and 11 columns, and Primo and Duo now carry 7.5% commission like the rest of Kellars. Unbranded 8 and 12 no longer have #REF! errors."]}
+  ];
+  document.getElementById("notes-count").textContent=notes.filter(n=>n.cls!=="info").length;
+  document.getElementById("notes").innerHTML=notes.map(n=>`<div class="note ${n.cls||""}"><h3>${n.h}</h3>${n.p.map(t=>t.startsWith("<ul")?t:`<p>${t}</p>`).join("")}</div>`).join("");
+}
+
+// ---------- shell ----------
+function syncFx(){document.getElementById("fx-gbpinr").value=state.A.gbpinr;document.getElementById("fx-usdinr").value=state.A.usdinr;}
+["gbpinr","usdinr"].forEach(k=>document.getElementById("fx-"+k).addEventListener("change",e=>{
+  const v=parseFloat(e.target.value); if(!isFinite(v)||v<=0)return; state.A[k]=v; save(); renderAll();
+}));
+const tEl=document.getElementById("target");
+tEl.addEventListener("change",()=>{const v=parseFloat(tEl.value); if(isFinite(v)){state.target=v;quoteVal=null;save();renderAll();}});
+document.getElementById("filter").addEventListener("change",e=>{if(isStd())state.filter=e.target.value;else state.cfilter=e.target.value;save();renderTable();});
+document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
+function setTab(t){state.tab=t;save();
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t));
+  ["skus","assume","notes"].forEach(p=>document.getElementById("pane-"+p).hidden=p!==t);}
+let resetArmed=false;
+document.getElementById("btn-reset").addEventListener("click",e=>{
+  if(!resetArmed){resetArmed=true;e.target.textContent="Click again to reset";setTimeout(()=>{resetArmed=false;e.target.textContent="Reset to sheet";},3000);return;}
+  resetArmed=false;e.target.textContent="Reset to sheet";
+  const tab=state.tab; state=fresh(); state.tab=tab;
+  quoteVal=null; save(); renderAll(); toast("Reset to the cost sheet and price lists");
+});
+document.getElementById("btn-copy").addEventListener("click",()=>{
+  const A=state.A,D=derive(A);
+  const head=["Group","SKU","Density","Thickness mm","Rolls/container","Lamination 1","Lamination 2","Standard commission %","Foam","Lamination","Adhesive","Polythene","Ex-factory","India haulage","Ocean","UK inland","Landed ex commission","Standard price","Standard margin %",...state.customers.flatMap(c=>[c.name+" price",c.name+" margin %"]),`Price @ ${state.target}%`];
+  const lines=[head.join(",")];
+  for(const s of state.skus){const sp=stdPrice(s,A,D), r=cost(S(s,"std"),A,D,sp);
+    lines.push([s.range,s.name,s.density,s.mm,s.rolls,s.lam1,s.lam2,commOf(s,"std"),
+      ...["foam","lam","adh","pack"].map(k=>r.c[k].toFixed(4)),r.exf.toFixed(4),...["haul","ocean","uk"].map(k=>r.c[k].toFixed(4)),r.ex.toFixed(4),sp.toFixed(2),(r.margin*100).toFixed(2),
+      ...state.customers.flatMap(c=>{const dv=c.prices[s.id];return dv?[dv.p,(cost(S(s,c.id),A,D,dv.p).margin*100).toFixed(2)]:["",""];}),
+      r.target(state.target).toFixed(2)]
+      .map(v=>/[,"]/.test(String(v))?`"${String(v).replace(/"/g,'""')}"`:v).join(","));}
+  const txt=lines.join("\n");
+  navigator.clipboard.writeText(txt).then(()=>toast("Copied "+state.skus.length+" SKUs as CSV. Paste into Excel."),()=>{
+    const ta=document.createElement("textarea");ta.value=txt;ta.style.cssText="position:fixed;inset:20% 10%;z-index:30;width:80%;height:60%";document.body.appendChild(ta);ta.select();
+    toast("Copy blocked here. Text is selected; press Ctrl/Cmd+C, then click away.");ta.addEventListener("blur",()=>ta.remove());
+  });
+});
+let tt; function toast(m){const t=document.getElementById("toast");t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,3200);}
+function renderAll(){syncFx();tEl.value=state.target;renderLists();renderTable();renderDetail();renderAssume();renderNotes();}
+renderAll(); setTab(state.tab);
+window.__fw={cost,derive,DEFAULT_A,defaultSkus,defaultCustomers,stdPrice:(s)=>stdPrice(s,state.A,derive(state.A)),setList:l=>{state.list=l;renderAll();}};
+})();
+</script>
+</body>
+</html>
