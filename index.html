@@ -74,7 +74,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute
 th:first-child,td:first-child{text-align:left}
 td.num{font-family:var(--f-mono);font-size:13px}
 td.muted{color:var(--muted)}
-tr.grp td{background:var(--bg);font-family:var(--f-display);font-stretch:90%;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;padding-top:12px}
+tr.grp td{background:var(--bg);font-family:var(--f-display);font-stretch:90%;font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink);text-align:left;padding-top:18px;border-bottom:0}
+tr.colhead th{position:static;border-top:1px solid var(--line)}
 tbody tr.sku{cursor:pointer}
 tbody tr.sku:hover td{background:var(--accent-soft)}
 tbody tr.sku.sel td{background:var(--accent-soft)}
@@ -419,7 +420,7 @@ function renderCommBar(){
 const thead=document.querySelector("#sku-table thead"), tbody=document.querySelector("#sku-table tbody");
 function renderTable(){
   const A=state.A,D=derive(A),std=isStd(),cu=cust(),filt=std?state.filter:state.cfilter;
-  thead.innerHTML=std?`<tr><th>SKU</th><th>Density</th><th>mm</th><th>Rolls/ctr</th><th>Comm %</th><th>Price £</th><th>Ex-factory £</th><th>Landed £</th><th>Profit £</th><th>Margin</th><th>Price @ target</th><th>Gap £</th></tr>`
+  const headRow=std?`<tr><th>SKU</th><th>Density</th><th>mm</th><th>Rolls/ctr</th><th>Comm %</th><th>Price £</th><th>Ex-factory £</th><th>Landed £</th><th>Profit £</th><th>Margin</th><th>Price @ target</th><th>Gap £</th></tr>`
     :`<tr><th>SKU</th><th>Density</th><th>mm</th><th>Since</th><th>Comm %</th><th>Standard £</th><th>Agreed £</th><th>Discount</th><th>Ex-factory £</th><th>Landed £</th><th>Profit £</th><th>Margin</th><th>Margin at std</th><th>Gap £</th></tr>`;
   const cols=std?12:14;
   const commTd=s=>`<td class="num"><input class="comm${CL.by[s.id]!=null?" ov":""}" type="number" step="0.5" min="0" id="comm-${s.id}" data-id="${s.id}" value="${s.comm}" aria-label="Commission % ${esc(s.name)}" title="${CL.by[s.id]!=null?"Set for this SKU. Clear to use the list rate.":"List rate"}"></td>`;
@@ -431,7 +432,7 @@ function renderTable(){
     if(filt==="below"&&r.margin>=state.target/100-1e-9)continue;
     if(filt==="loss"&&r.profit>=0)continue;
     cnt++; sum+=r.margin; if(r.margin<state.target/100-1e-9)below++; if(r.profit<0)loss++;
-    if(s.range!==last){rows+=`<tr class="grp"><td colspan="${cols}">${esc(s.range)}</td></tr>`;last=s.range;}
+    if(s.range!==last){rows+=`<tr class="grp"><td colspan="${cols}">${esc(s.range)}</td></tr>`+headRow.replace("<tr>","<tr class=\"colhead\">");last=s.range;}
     const tag=lp.src==="target"?`<span class="tag target">= target</span>`:"";
     const gapTd=`<td class="num ${gap<-0.005?"gap-neg":"gap-pos"}">${isFinite(gap)?(gap>=0?"+":"")+gap.toFixed(2):"—"}</td>`;
     const common=`<td>${esc(s.name)}${tag}</td><td class="num muted">${s.density}</td><td class="num muted">${s.mm}</td>`;
