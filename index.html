@@ -213,6 +213,23 @@ td input.comm.ov{border-color:var(--accent);color:var(--accent);font-weight:500}
 .vlegend{padding:0 16px 12px;color:var(--muted);font-size:12px}
 .vlegend b{color:var(--accent);font-weight:500}
 .vlegend i{color:var(--warn);font-style:normal}
+.pick{grid-column:1/-1;display:flex;flex-direction:column;gap:6px}
+.pick .ph{display:flex;gap:10px;align-items:center;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.pick .ph button{padding:1px 7px;font-size:11px;text-transform:none;letter-spacing:0}
+.pick .opts{display:flex;flex-wrap:wrap;gap:6px 8px}
+.chk{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:6px;padding:5px 10px;border:1px solid var(--line);border-radius:16px;background:var(--surface);font-size:13px!important;text-transform:none!important;letter-spacing:0!important;color:var(--ink)!important;cursor:pointer}
+.chk:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.chk input{width:auto!important;margin:0}
+.chk small{color:var(--muted);font-size:11px}
+.addbtn{border-style:dashed;color:var(--accent);border-color:var(--accent);background:transparent}
+.listtools{display:inline-flex;gap:6px}
+.listtools button{padding:3px 9px;font-size:12px}
+.skupanel{grid-template-columns:repeat(4,minmax(0,1fr))}
+.skupanel .two{grid-column:span 2}
+@media (max-width:900px){.skupanel{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.skupanel .chk{align-self:end}
+.danger{color:var(--bad);border-color:var(--bad)}
+.ptag{display:inline-block;margin-left:6px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;padding:1px 5px;border-radius:3px;background:var(--warn-soft);color:var(--warn);vertical-align:1px}
 .dpos{color:var(--good)} .dneg{color:var(--bad)}
 .unmatched{columns:2 220px;margin:6px 0 0;padding-left:18px}
 </style>
@@ -240,8 +257,10 @@ td input.comm.ov{border-color:var(--accent);color:var(--accent);font-weight:500}
     <h3>Save a version of the current pricing</h3>
     <label for="sv-name">Name<input id="sv-name" type="text" maxlength="80" required></label>
     <label for="sv-list">Main price list<select id="sv-list"></select></label>
+    <div class="pick"><div class="ph">Price lists to save <button type="button" data-all="sv-lists">All</button><button type="button" data-none="sv-lists">None</button></div><div class="opts" id="sv-lists"></div></div>
+    <div class="pick"><div class="ph">Product sections to save <button type="button" data-all="sv-groups">All</button><button type="button" data-none="sv-groups">None</button></div><div class="opts" id="sv-groups"></div></div>
     <label class="wide" for="sv-note">Note (optional)<textarea id="sv-note" maxlength="400" placeholder="e.g. Quote sent to Floors N Carpets, ₹128/£, scrap at ₹60"></textarea></label>
-    <div class="acts"><button type="submit" class="primary">Save version</button><button type="button" id="sv-cancel">Cancel</button><span>Saves every variable, price, commission and deal as they are now. Later changes won’t alter it.</span></div>
+    <div class="acts"><button type="submit" class="primary">Save version</button><button type="button" id="sv-cancel">Cancel</button><span id="sv-msg">Saves the variables plus the chosen price lists and sections as they are now. Later changes won’t alter it.</span></div>
   </form>
 
   <main>
@@ -251,6 +270,29 @@ td input.comm.ov{border-color:var(--accent);color:var(--accent);font-weight:500}
         <div class="seg" id="lists" role="group" aria-label="Price list"></div>
         <span class="hint" id="list-hint"></span>
       </div>
+      <form class="savepanel" id="custpanel" hidden>
+        <h3 id="cp-title">Add a customer price list</h3>
+        <label for="cp-name">Short name (shown on the button)<input id="cp-name" type="text" maxlength="40" required placeholder="e.g. Carpetright"></label>
+        <label for="cp-full">Full company name<input id="cp-full" type="text" maxlength="100" placeholder="e.g. CARPETRIGHT LTD"></label>
+        <div class="acts"><button type="submit" class="primary" id="cp-submit">Add price list</button><button type="button" id="cp-cancel">Cancel</button><span id="cp-msg">Starts with no agreed prices, so every SKU uses the standard price. Type agreed prices in the table. Commission follows Standard until you set it.</span></div>
+      </form>
+      <form class="savepanel skupanel" id="skupanel" hidden>
+        <h3>Add a SKU</h3>
+        <label for="ns-group">Product section<select id="ns-group"></select></label>
+        <label for="ns-newgroup" id="ns-newgroup-l">New section name<input id="ns-newgroup" type="text" maxlength="40" placeholder="e.g. Sarva · Step range"></label>
+        <label class="two" for="ns-name">SKU name<input id="ns-name" type="text" maxlength="40" required placeholder="e.g. Steplux Blue 9"></label>
+        <label for="ns-density">Density kg/m³<input id="ns-density" type="number" step="any" min="1" required value="90"></label>
+        <label for="ns-mm">Thickness mm<input id="ns-mm" type="number" step="any" min="0.5" required value="9"></label>
+        <label for="ns-rolls">Rolls / container<input id="ns-rolls" type="number" step="any" min="1" required value="450"></label>
+        <label for="ns-comm">Commission %<input id="ns-comm" type="number" step="any" min="0" value="5"></label>
+        <label for="ns-lam1">Lamination 1<select id="ns-lam1"></select></label>
+        <label for="ns-lam2">Lamination 2<select id="ns-lam2"></select></label>
+        <label for="ns-cpoly">Compression poly ₹/roll<input id="ns-cpoly" type="number" step="any" min="0" value="0"></label>
+        <label for="ns-foam">Foam multiplier<input id="ns-foam" type="number" step="any" min="0" value="1"></label>
+        <label for="ns-price">Standard selling price £<input id="ns-price" type="number" step="any" min="0" placeholder="leave blank = target"></label>
+        <label class="chk" for="ns-target"><input type="checkbox" id="ns-target"> Price at target margin</label>
+        <div class="acts"><button type="submit" class="primary">Add SKU</button><button type="button" id="ns-cancel">Cancel</button><span>Uses the cost assumptions like every other SKU. You can change any of this later in the SKU panel.</span></div>
+      </form>
       <div class="commbar" id="commbar"></div>
       <div class="summary">
         <div class="stat"><b id="s-count">–</b><span id="s-count-l">SKUs</span></div>
@@ -259,6 +301,7 @@ td input.comm.ov{border-color:var(--accent);color:var(--accent);font-weight:500}
         <div class="stat bad"><b id="s-loss">–</b><span>Loss-making</span></div>
         <div class="stat" id="s-disc-box" hidden><b id="s-disc">–</b><span>Avg discount vs standard</span></div>
         <div class="controls">
+          <button type="button" class="addbtn" id="btn-addsku">+ Add SKU</button>
           <label for="target">Target margin <input id="target" type="number" step="0.5" style="width:64px"> %</label>
           <label for="filter">Show <select id="filter"></select></label>
         </div>
@@ -443,16 +486,76 @@ const cust=()=>state.customers.find(c=>c.id===state.list);
 // ---------- list switcher ----------
 function renderLists(){
   const lists=[{id:"std",name:"Standard"}].concat(state.customers);
-  document.getElementById("lists").innerHTML=lists.map(l=>`<button data-l="${l.id}" aria-pressed="${l.id===state.list}">${esc(l.name)}${l.id!=="std"?` <span class="muted">(${Object.keys(l.prices).length})</span>`:""}</button>`).join("");
+  document.getElementById("lists").innerHTML=lists.map(l=>`<button data-l="${l.id}" aria-pressed="${l.id===state.list}">${esc(l.name)}${l.id!=="std"?` <span class="muted">(${Object.keys(l.prices).length})</span>`:""}</button>`).join("")+`<button class="addbtn" id="btn-addcust" type="button">+ Customer</button>`;
   const cu=cust();
-  document.getElementById("list-hint").textContent=cu?`Agreed prices for ${cu.full}. SKUs without a deal fall back to standard.`:"Direct container price list, Sarva and Kellars.";
+  document.getElementById("list-hint").innerHTML=cu?`Agreed prices for ${esc(cu.full||cu.name)}. SKUs without a deal fall back to standard. <span class="listtools"><button type="button" id="cu-rename">Rename</button><button type="button" id="cu-delete" class="danger">${delCustArm?"Click again to delete this list":"Delete list"}</button></span>`:"Direct container price list, Sarva and Kellars.";
   const f=document.getElementById("filter");
   f.innerHTML=isStd()?`<option value="all">All SKUs</option><option value="below">Below target</option><option value="loss">Loss-making</option>`
     :`<option value="deals">Agreed prices only</option><option value="all">All SKUs</option><option value="below">Below target</option><option value="loss">Loss-making</option>`;
   f.value=isStd()?state.filter:state.cfilter;
   renderCommBar();
 }
-document.getElementById("lists").addEventListener("click",e=>{const b=e.target.closest("button[data-l]");if(!b)return;state.list=b.dataset.l;save();renderLists();renderTable();renderDetail();});
+document.getElementById("lists").addEventListener("click",e=>{
+  if(e.target.closest("#btn-addcust")){openCust(null);return;}
+  const b=e.target.closest("button[data-l]");if(!b)return;state.list=b.dataset.l;delCustArm=false;save();renderLists();renderTable();renderDetail();});
+let delCustArm=false, editCust=null;
+const cp=document.getElementById("custpanel");
+function openCust(c){
+  editCust=c; document.getElementById("cp-title").textContent=c?`Rename ${c.name}`:"Add a customer price list";
+  document.getElementById("cp-submit").textContent=c?"Save name":"Add price list";
+  document.getElementById("cp-msg").hidden=!!c;
+  document.getElementById("cp-name").value=c?c.name:""; document.getElementById("cp-full").value=c?(c.full||""):"";
+  document.getElementById("skupanel").hidden=true; cp.hidden=false; document.getElementById("cp-name").focus();
+}
+document.getElementById("cp-cancel").addEventListener("click",()=>{cp.hidden=true;});
+cp.addEventListener("submit",e=>{
+  e.preventDefault();
+  const name=document.getElementById("cp-name").value.trim(), full=document.getElementById("cp-full").value.trim()||name.toUpperCase();
+  if(!name)return;
+  if(editCust){editCust.name=name; editCust.full=full; toast(`Renamed to ${name}`);}
+  else{const id="c"+Date.now().toString(36); state.customers.push({id,name,full,prices:{}}); CLof(id); state.list=id; state.cfilter="all"; toast(`Added ${name}. Type agreed prices in the Agreed selling price column.`);}
+  cp.hidden=true; save(); renderLists(); renderTable(); renderDetail(); renderNotes();
+});
+document.getElementById("list-hint").addEventListener("click",e=>{
+  const c=cust(); if(!c)return;
+  if(e.target.closest("#cu-rename")){openCust(c);return;}
+  if(e.target.closest("#cu-delete")){
+    if(!delCustArm){delCustArm=true;renderLists();setTimeout(()=>{if(delCustArm){delCustArm=false;renderLists();}},4000);return;}
+    delCustArm=false; state.customers=state.customers.filter(x=>x.id!==c.id); if(state.commissions)delete state.commissions[c.id];
+    state.list="std"; save(); renderAll(); toast(`Deleted the ${c.name} price list. Saved versions that include it are unchanged.`);
+  }
+});
+
+// ---------- add SKU ----------
+const skp=document.getElementById("skupanel");
+function groupsNow(){return [...new Set(state.skus.map(s=>s.range))];}
+document.getElementById("btn-addsku").addEventListener("click",()=>{
+  if(!skp.hidden){skp.hidden=true;return;}
+  const gs=groupsNow(), cur=(state.skus.find(x=>x.id===state.sel)||{}).range;
+  document.getElementById("ns-group").innerHTML=gs.map(g=>`<option${g===cur?" selected":""}>${esc(g)}</option>`).join("")+`<option value="__new">New section…</option>`;
+  const lo=v=>LAMS.map(o=>`<option${o===v?" selected":""}>${o}</option>`).join("");
+  document.getElementById("ns-lam1").innerHTML=lo("Plain NW"); document.getElementById("ns-lam2").innerHTML=lo("Plain NW");
+  document.getElementById("ns-name").value=""; document.getElementById("ns-price").value=""; document.getElementById("ns-target").checked=false; document.getElementById("ns-price").disabled=false;
+  syncNewGroup(); cp.hidden=true; skp.hidden=false; document.getElementById("ns-name").focus();
+});
+function syncNewGroup(){const nw=document.getElementById("ns-group").value==="__new"; document.getElementById("ns-newgroup-l").hidden=!nw; document.getElementById("ns-newgroup").required=nw;}
+document.getElementById("ns-group").addEventListener("change",syncNewGroup);
+document.getElementById("ns-target").addEventListener("change",e=>{document.getElementById("ns-price").disabled=e.target.checked;});
+document.getElementById("ns-cancel").addEventListener("click",()=>{skp.hidden=true;});
+skp.addEventListener("submit",e=>{
+  e.preventDefault();
+  const g=document.getElementById("ns-group").value, range=g==="__new"?document.getElementById("ns-newgroup").value.trim():g;
+  const name=document.getElementById("ns-name").value.trim(); if(!range||!name)return;
+  const num=id=>parseFloat(document.getElementById(id).value);
+  const tgt=document.getElementById("ns-target").checked, pr=num("ns-price"), auto=tgt||!isFinite(pr);
+  const sku={id:"u"+Date.now().toString(36),range,name,density:num("ns-density"),mm:num("ns-mm"),rolls:num("ns-rolls"),
+    lam1:document.getElementById("ns-lam1").value,lam2:document.getElementById("ns-lam2").value,comm:isFinite(num("ns-comm"))?num("ns-comm"):0,
+    cpoly:num("ns-cpoly")||0,foamMult:num("ns-foam")||1,std:auto?null:pr,auto,tgt:auto,col:"",sheetPrice:null,custom:true};
+  let at=-1; state.skus.forEach((x,i)=>{if(x.range===range)at=i;});
+  if(at<0)state.skus.push(sku); else state.skus.splice(at+1,0,sku);
+  state.sel=sku.id; if(state.list!=="std"&&state.cfilter==="deals")state.cfilter="all";
+  skp.hidden=true; save(); renderAll(); toast(`Added ${name} to ${range}${auto?" at the target price":""}`);
+});
 
 // ---------- commission bar ----------
 let commScope="all";
@@ -567,7 +670,7 @@ tbody.addEventListener("change",e=>{
 });
 
 const SEG=[["foam","Foam","--foam"],["lam","Lamination","--lam"],["adh","Adhesive","--adh"],["pack","Polythene","--pack"],["haul","India haulage","--log"],["ocean","Ocean freight","--log"],["uk","UK inland","--log"],["comm","Commission","--comm"]];
-let quoteMode="margin", quoteVal=null, ctrs=1;
+let quoteMode="margin", quoteVal=null, ctrs=1, delSkuArm=null;
 function renderDetail(){
   const box=document.getElementById("detail");
   const s0=state.skus.find(x=>x.id===state.sel)||state.skus[0]; if(!s0){box.innerHTML="";return;}
@@ -635,7 +738,14 @@ function renderDetail(){
      <dt>Roll weight</dt><dd>${r.weight.toFixed(2)} kg</dd>
      <dt>Container payload</dt><dd>${Math.round(ctrKg).toLocaleString()} / ${A.payload.toLocaleString()} kg</dd>
      <dt>Logistics per roll</dt><dd>${gbp(r.c.haul+r.c.ocean+r.c.uk)}</dd>
-   </dl>`;
+   </dl>
+   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button type="button" id="sku-del" class="danger">${delSkuArm===s0.id?"Click again to remove "+esc(s0.name):"Remove this SKU"}</button><span class="muted" style="font-size:12px">${s0.custom?"Added by you.":"From the cost sheet. Reset to sheet brings it back."}</span></div>`;
+  box.querySelector("#sku-del").addEventListener("click",()=>{
+    if(delSkuArm!==s0.id){delSkuArm=s0.id;renderDetail();setTimeout(()=>{if(delSkuArm===s0.id){delSkuArm=null;renderDetail();}},4000);return;}
+    delSkuArm=null; const i=state.skus.indexOf(s0); state.skus.splice(i,1); state.customers.forEach(c=>delete c.prices[s0.id]);
+    Object.values(state.commissions||{}).forEach(L=>L.by&&delete L.by[s0.id]);
+    state.sel=(state.skus[Math.min(i,state.skus.length-1)]||{}).id; save(); renderAll(); toast(`Removed ${s0.name}. Saved versions that include it are unchanged.`);
+  });
   box.querySelectorAll(".fields [data-k]").forEach(el=>el.addEventListener("change",()=>{
     const k=el.dataset.k, v=el.tagName==="SELECT"?el.value:parseFloat(el.value)||0;
     if(k==="comm"){CLof(state.list).by[s0.id]=v; renderCommBar();} else s0[k]=v;
@@ -801,12 +911,15 @@ try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}c
 const fdt=iso=>{const d=new Date(iso);return d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})+", "+d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});};
 function vStats(v,list){const rows=v.rows[list]||[]; const use=list==="std"?rows:rows.filter(r=>r.src==="deal"); const n=use.length; return {n,avg:n?use.reduce((a,r)=>a+r.margin,0)/n:NaN};}
 
-function makeVersion(name,note,list){
-  return {id:"v"+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name,note,list,
+function makeVersion(name,note,list,lists,groups){
+  const all=buildRows(), Ls=lists||Object.keys(all), G=groups?new Set(groups):null, rows={};
+  for(const l of Ls){if(all[l])rows[l]=G?all[l].filter(r=>G.has(r.group)):all[l];}
+  const partial=!!(lists&&lists.length<Object.keys(all).length)||!!(groups&&groups.length<groupsNow().length);
+  return {id:"v"+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name,note,list:Ls.includes(list)?list:Ls[0],lists:Ls,groups:groups||groupsNow(),partial,
     created:new Date().toISOString(),target:state.target,fx:{gbpinr:state.A.gbpinr,usdinr:state.A.usdinr},
     customers:state.customers.map(c=>({id:c.id,name:c.name,full:c.full})),
     state:JSON.parse(JSON.stringify({A:state.A,skus:state.skus,customers:state.customers,commissions:state.commissions,target:state.target})),
-    rows:buildRows()};
+    rows};
 }
 const sp=document.getElementById("savepanel");
 document.getElementById("btn-save").addEventListener("click",()=>{
@@ -815,13 +928,22 @@ document.getElementById("btn-save").addEventListener("click",()=>{
   sel.innerHTML=["std",...state.customers.map(c=>c.id)].map(id=>`<option value="${id}"${id===state.list?" selected":""}>${esc(listNameOf(id))}</option>`).join("");
   document.getElementById("sv-name").value=`${listNameOf(state.list)} – ${new Date().toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}`;
   document.getElementById("sv-note").value="";
+  const L=["std",...state.customers.map(c=>c.id)];
+  document.getElementById("sv-lists").innerHTML=L.map(id=>`<label class="chk"><input type="checkbox" value="${id}" checked> ${esc(listNameOf(id))}${id!=="std"?` <small>${Object.keys(cust_(id).prices).length} deals</small>`:""}</label>`).join("");
+  document.getElementById("sv-groups").innerHTML=groupsNow().map(g=>`<label class="chk"><input type="checkbox" value="${esc(g)}" checked> ${esc(g)} <small>${state.skus.filter(x=>x.range===g).length}</small></label>`).join("");
   sp.hidden=false; document.getElementById("sv-name").focus(); document.getElementById("sv-name").select();
 });
 document.getElementById("sv-cancel").addEventListener("click",()=>{sp.hidden=true;});
+const cust_=id=>state.customers.find(c=>c.id===id)||{prices:{}};
+sp.addEventListener("click",e=>{const a=e.target.closest("[data-all],[data-none]"); if(!a)return; const box=document.getElementById(a.dataset.all||a.dataset.none);
+  box.querySelectorAll("input").forEach(i=>i.checked=!!a.dataset.all);});
+const picked=id=>[...document.querySelectorAll(`#${id} input:checked`)].map(i=>i.value);
 sp.addEventListener("submit",e=>{
   e.preventDefault();
   const name=document.getElementById("sv-name").value.trim()||"Untitled version";
-  const v=makeVersion(name,document.getElementById("sv-note").value.trim(),document.getElementById("sv-list").value);
+  const lists=picked("sv-lists"), groups=picked("sv-groups");
+  if(!lists.length||!groups.length){toast(!lists.length?"Choose at least one price list to save":"Choose at least one product section to save");return;}
+  const v=makeVersion(name,document.getElementById("sv-note").value.trim(),document.getElementById("sv-list").value,lists,groups);
   versions.unshift(v);
   if(!saveVersions()){versions.shift();return;}
   sp.hidden=true; vSel=v.id; vList=v.list; renderVersions(); toast(`Saved “${name}”. Find it under Saved versions.`);
@@ -832,7 +954,7 @@ function renderVersions(){
   const box=document.getElementById("vlist");
   if(!versions.length){box.innerHTML=`<div class="vempty"><b>No saved versions yet.</b> Set up the pricing you want to keep (variables, prices, commission, deals), then press <b>Save version</b> at the top. The version keeps every number exactly as it is, so later changes won’t affect it.</div>`;document.getElementById("vview").innerHTML="";return;}
   box.innerHTML=`<div class="tablebox"><table class="vlist"><thead><tr><th>Version</th><th>Main price list</th><th>Saved</th><th>₹/£</th><th>Variables</th><th>Avg margin</th><th></th></tr></thead><tbody>${versions.map(v=>{const st=vStats(v,v.list);
-    return `<tr class="${v.id===vSel?"on":""}" data-v="${v.id}"><td class="name"><b>${esc(v.name)}</b>${v.note?`<span class="vnote">${esc(v.note)}</span>`:""}</td>
+    return `<tr class="${v.id===vSel?"on":""}" data-v="${v.id}"><td class="name"><b>${esc(v.name)}</b>${v.partial?`<span class="ptag" title="${esc((v.lists||[]).map(l=>listNameOf(l,v.customers)).join(", ")+" · "+(v.groups||[]).join(", "))}">Partial</span>`:""}${v.note?`<span class="vnote">${esc(v.note)}</span>`:""}</td>
     <td>${esc(listNameOf(v.list,v.customers))}</td><td class="num muted">${fdt(v.created)}</td><td class="num">${v.fx.gbpinr}</td><td class="muted" style="font-size:12px">${(()=>{const i=varsInfo(v);return i.nNow?`${i.nNow} differ from now`:"same as now";})()}</td>
     <td><span class="pill ${mClass(st.avg)}">${pct(st.avg)}</span> <span class="muted" style="font-size:12px">${st.n} SKU${st.n===1?"":"s"}</span></td>
     <td><div class="acts"><button data-act="view">${v.id===vSel?"Hide":"View"}</button><button data-act="restore" title="Replace the numbers in the tool with this version. Your current work is saved as a version first.">${vArm[v.id+"restore"]?"Click again: current work is saved first":"Load into tool"}</button><button data-act="delete">${vArm[v.id+"delete"]?"Click again to delete":"Delete"}</button></div></td></tr>`;}).join("")}</tbody></table></div>`;
@@ -849,8 +971,25 @@ document.getElementById("vlist").addEventListener("click",e=>{
   if(act==="restore"){
     const auto=makeVersion(`Auto-saved before loading “${v.name}”`,"Your working copy as it was just before a saved version was loaded into the tool.",state.list);
     versions.unshift(auto); if(!saveVersions()){versions.shift();return;}
-    const st=JSON.parse(JSON.stringify(v.state)); Object.assign(state,{A:Object.assign({},DEFAULT_A,st.A),skus:st.skus,customers:st.customers,commissions:st.commissions,target:st.target,list:v.list});
-    save(); quoteVal=null; document.getElementById("agrid").innerHTML=""; renderAll(); setTab("skus"); toast(`Loaded “${v.name}” into the tool. Your previous work is saved as “${auto.name}”.`);}
+    const st=JSON.parse(JSON.stringify(v.state));
+    if(!v.partial){Object.assign(state,{A:Object.assign({},DEFAULT_A,st.A),skus:st.skus,customers:st.customers,commissions:st.commissions,target:st.target,list:v.list});}
+    else{
+      const G=new Set(v.groups), inG=id=>{const x=st.skus.find(k=>k.id===id)||state.skus.find(k=>k.id===id); return x&&G.has(x.range);};
+      state.A=Object.assign({},DEFAULT_A,st.A); state.target=st.target;
+      const keepStd=!v.lists.includes("std");
+      for(const sk of st.skus.filter(k=>G.has(k.range))){const i=state.skus.findIndex(k=>k.id===sk.id);
+        if(i>=0){if(keepStd){sk.std=state.skus[i].std; sk.auto=state.skus[i].auto;} state.skus[i]=sk;} else{let at=-1; state.skus.forEach((x,j)=>{if(x.range===sk.range)at=j;}); at<0?state.skus.push(sk):state.skus.splice(at+1,0,sk);}}
+      for(const l of v.lists){
+        if(st.commissions&&st.commissions[l])state.commissions[l]=st.commissions[l];
+        if(l==="std")continue;
+        const src=st.customers.find(c=>c.id===l); if(!src)continue;
+        let cur=state.customers.find(c=>c.id===l); if(!cur){cur={id:src.id,name:src.name,full:src.full,prices:{}}; state.customers.push(cur);}
+        Object.keys(cur.prices).forEach(id=>{if(inG(id))delete cur.prices[id];});
+        Object.entries(src.prices).forEach(([id,pv])=>{if(inG(id))cur.prices[id]=pv;});
+      }
+      state.list=v.list;
+    }
+    save(); quoteVal=null; document.getElementById("agrid").innerHTML=""; renderAll(); setTab("skus"); toast(v.partial?`Loaded the variables and the saved lists/sections of “${v.name}”. Everything else is as it was. Your previous work is saved as “${auto.name}”.`:`Loaded “${v.name}” into the tool. Your previous work is saved as “${auto.name}”.`);}
 });
 function commText(L,fallback){if(!L)return fallback; const n=Object.keys(L.by||{}).length; if(L.all!=null)return `${L.all}% on all SKUs`+(n?`, ${n} SKU${n>1?"s":""} set individually`:""); return n?`${fallback}, ${n} SKU${n>1?"s":""} changed`:fallback;}
 function varsInfo(v){
@@ -891,7 +1030,7 @@ function renderVersionView(){
       ${vCompare?(n?`<td class="num">${n2(n.price)}</td><td><span class="pill ${mClass(n.margin)}">${pct(n.margin)}</span></td><td class="num ${dm>0.05?"dpos":dm<-0.05?"dneg":"muted"}">${(dm>=0?"+":"")+dm.toFixed(1)} pts</td>`:`<td class="muted" colspan="3">not in current list</td>`):""}</tr>`;
   }
   box.innerHTML=`<div class="vhead"><div><h2>${esc(v.name)}<span class="frozen">Frozen</span></h2>
-      <div class="meta">Saved ${fdt(v.created)} · ₹${v.fx.gbpinr}/£ · ₹${v.fx.usdinr}/$ · target margin ${v.target}%${v.note?" · "+esc(v.note):""}</div></div>
+      <div class="meta">Saved ${fdt(v.created)} · ₹${v.fx.gbpinr}/£ · ₹${v.fx.usdinr}/$ · target margin ${v.target}%${v.note?" · "+esc(v.note):""}${v.partial?`<br>Includes: ${esc((v.lists||[]).map(l=>listNameOf(l,v.customers)).join(", "))} · ${esc((v.groups||[]).join(", "))}`:""}</div></div>
     <div class="vtools"><div class="seg" role="group" aria-label="Price list in this version">${lists.map(l=>`<button data-vl="${l}" aria-pressed="${l===vList}">${esc(listNameOf(l,v.customers))}</button>`).join("")}</div>
       <label for="v-compare" style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="v-compare"${vCompare?" checked":""}> Compare with current</label>
       <button id="v-copy">Copy for Excel</button></div></div>
