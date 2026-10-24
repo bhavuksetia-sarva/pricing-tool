@@ -425,8 +425,8 @@ function renderCommBar(){
 const thead=document.querySelector("#sku-table thead"), tbody=document.querySelector("#sku-table tbody");
 function renderTable(){
   const A=state.A,D=derive(A),std=isStd(),cu=cust(),filt=std?state.filter:state.cfilter;
-  const headRow=std?`<tr><th>SKU</th><th>Density</th><th>mm</th><th>Rolls/ctr</th><th>Comm %</th><th>Price £</th><th>Ex-factory £</th><th>Landed £</th><th>Profit £</th><th>Margin</th><th>Price @ target</th><th>Gap £</th></tr>`
-    :`<tr><th>SKU</th><th>Density</th><th>mm</th><th>Since</th><th>Comm %</th><th>Standard £</th><th>Agreed £</th><th>Discount</th><th>Ex-factory £</th><th>Landed £</th><th>Profit £</th><th>Margin</th><th>Margin at std</th><th>Gap £</th></tr>`;
+  const headRow=std?`<tr><th>SKU</th><th>Density</th><th>mm</th><th>Rolls/ctr</th><th>Comm %</th><th>Ex-factory £</th><th>Landed £</th><th>Selling price £</th><th>Profit £</th><th>Margin</th><th>Price @ target</th><th>Gap £</th></tr>`
+    :`<tr><th>SKU</th><th>Density</th><th>mm</th><th>Since</th><th>Comm %</th><th>Ex-factory £</th><th>Landed £</th><th>Standard £</th><th>Agreed selling price £</th><th>Discount</th><th>Profit £</th><th>Margin</th><th>Margin at std</th><th>Gap £</th></tr>`;
   const cols=std?12:14;
   const commTd=s=>`<td class="num"><input class="comm${CL.by[s.id]!=null?" ov":""}" type="number" step="0.5" min="0" id="comm-${s.id}" data-id="${s.id}" value="${s.comm}" aria-label="Commission % ${esc(s.name)}" title="${CL.by[s.id]!=null?"Set for this SKU. Clear to use the list rate.":"List rate"}"></td>`;
   let rows="",last="",cnt=0,sum=0,below=0,loss=0,disc=0,nd=0;
@@ -448,18 +448,20 @@ function renderTable(){
     const priceVal=lp.src==="target"?lp.p.toFixed(2):lp.p;
     if(std){
       rows+=`<tr class="sku${s.id===state.sel?" sel":""}" data-id="${s.id}" tabindex="0">${common}<td class="num muted">${s.rolls}</td>${commTd(s)}
+      <td class="num muted">${n2(r.exf)}</td><td class="num">${n2(r.total)}</td>
       <td class="num"><span class="pcell">${isTgt(s0)&&!s0.auto?`<button class="to-target" data-id="${s.id}" title="Switch to the target price">Target</button>`:""}<input class="price${lp.src==="target"?" auto":""}" type="number" step="0.05" id="price-${s.id}" data-id="${s.id}" value="${priceVal}" aria-label="Standard price ${esc(s.name)}"></span></td>
-      <td class="num muted">${n2(r.exf)}</td><td class="num">${n2(r.total)}</td><td class="num ${r.profit<0?"gap-neg":""}">${n2(r.profit)}</td>
+      <td class="num ${r.profit<0?"gap-neg":""}">${n2(r.profit)}</td>
       <td><span class="pill ${mClass(r.margin)}">${pct(r.margin)}</span></td><td class="num">${n2(tp)}</td>${gapTd}</tr>`;
     }else{
       const sp=stdPrice(s0,A,D), rs=cost(S(s0,"std"),A,D,sp), d=sp?(sp-lp.p)/sp:0;
       if(lp.src==="deal"){disc+=d;nd++;}
       rows+=`<tr class="sku${s.id===state.sel?" sel":""}" data-id="${s.id}" tabindex="0">${common}
       <td class="date">${lp.d?fdate(lp.d):""}</td>${commTd(s)}
+      <td class="num muted">${n2(r.exf)}</td><td class="num">${n2(r.total)}</td>
       <td class="num muted">${n2(sp)}</td>
       <td class="num"><input class="price${lp.src!=="deal"?" auto":""}" type="number" step="0.05" id="cprice-${s.id}" data-id="${s.id}" value="${lp.src==="deal"?lp.p:""}" placeholder="${n2(lp.p)}" aria-label="Agreed price ${esc(s.name)}"></td>
       <td class="num">${lp.src==="deal"?"−"+(d*100).toFixed(1)+"%":"<span class=\"muted\">std</span>"}</td>
-      <td class="num muted">${n2(r.exf)}</td><td class="num">${n2(r.total)}</td><td class="num ${r.profit<0?"gap-neg":""}">${n2(r.profit)}</td>
+      <td class="num ${r.profit<0?"gap-neg":""}">${n2(r.profit)}</td>
       <td><span class="pill ${mClass(r.margin)}">${pct(r.margin)}</span></td>
       <td class="num muted">${pct(rs.margin)}</td>${gapTd}</tr>`;
     }
