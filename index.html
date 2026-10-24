@@ -198,6 +198,21 @@ td input.comm.ov{border-color:var(--accent);color:var(--accent);font-weight:500}
 .vview .meta{color:var(--muted);font-size:12px}
 .vview .vtools{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .vview .frozen{display:inline-block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:2px 6px;border-radius:3px;background:var(--sunk);color:var(--muted);vertical-align:3px;margin-left:8px}
+.vvars{background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.vvars>summary{cursor:pointer;padding:12px 16px;font-family:var(--f-display);font-stretch:90%;font-weight:700;font-size:15px;list-style-position:inside}
+.vvars>summary .meta{font-family:var(--f-body);font-stretch:100%;font-weight:400;margin-left:8px}
+.vvars .vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;padding:0 16px 16px}
+.vgrp{background:var(--bg);border-radius:6px;padding:10px 12px}
+.vgrp h4{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.vgrp dl{margin:0;display:grid;grid-template-columns:1fr auto;gap:3px 10px;font-size:13px}
+.vgrp dt{color:var(--ink)}
+.vgrp dd{margin:0;text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.vgrp dd .u{color:var(--muted);font-size:11px}
+.vgrp dd.chg{color:var(--accent);font-weight:500}
+.vgrp dd .now{display:block;font-size:11px;color:var(--warn)}
+.vlegend{padding:0 16px 12px;color:var(--muted);font-size:12px}
+.vlegend b{color:var(--accent);font-weight:500}
+.vlegend i{color:var(--warn);font-style:normal}
 .dpos{color:var(--good)} .dneg{color:var(--bad)}
 .unmatched{columns:2 220px;margin:6px 0 0;padding-left:18px}
 </style>
@@ -786,6 +801,13 @@ try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}c
 const fdt=iso=>{const d=new Date(iso);return d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})+", "+d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});};
 function vStats(v,list){const rows=v.rows[list]||[]; const use=list==="std"?rows:rows.filter(r=>r.src==="deal"); const n=use.length; return {n,avg:n?use.reduce((a,r)=>a+r.margin,0)/n:NaN};}
 
+function makeVersion(name,note,list){
+  return {id:"v"+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name,note,list,
+    created:new Date().toISOString(),target:state.target,fx:{gbpinr:state.A.gbpinr,usdinr:state.A.usdinr},
+    customers:state.customers.map(c=>({id:c.id,name:c.name,full:c.full})),
+    state:JSON.parse(JSON.stringify({A:state.A,skus:state.skus,customers:state.customers,commissions:state.commissions,target:state.target})),
+    rows:buildRows()};
+}
 const sp=document.getElementById("savepanel");
 document.getElementById("btn-save").addEventListener("click",()=>{
   if(!sp.hidden){sp.hidden=true;return;}
@@ -799,11 +821,7 @@ document.getElementById("sv-cancel").addEventListener("click",()=>{sp.hidden=tru
 sp.addEventListener("submit",e=>{
   e.preventDefault();
   const name=document.getElementById("sv-name").value.trim()||"Untitled version";
-  const v={id:"v"+Date.now().toString(36),name,note:document.getElementById("sv-note").value.trim(),list:document.getElementById("sv-list").value,
-    created:new Date().toISOString(),target:state.target,fx:{gbpinr:state.A.gbpinr,usdinr:state.A.usdinr},
-    customers:state.customers.map(c=>({id:c.id,name:c.name,full:c.full})),
-    state:JSON.parse(JSON.stringify({A:state.A,skus:state.skus,customers:state.customers,commissions:state.commissions,target:state.target})),
-    rows:buildRows()};
+  const v=makeVersion(name,document.getElementById("sv-note").value.trim(),document.getElementById("sv-list").value);
   versions.unshift(v);
   if(!saveVersions()){versions.shift();return;}
   sp.hidden=true; vSel=v.id; vList=v.list; renderVersions(); toast(`Saved “${name}”. Find it under Saved versions.`);
@@ -813,11 +831,11 @@ function renderVersions(){
   document.getElementById("ver-count").textContent=versions.length;
   const box=document.getElementById("vlist");
   if(!versions.length){box.innerHTML=`<div class="vempty"><b>No saved versions yet.</b> Set up the pricing you want to keep (variables, prices, commission, deals), then press <b>Save version</b> at the top. The version keeps every number exactly as it is, so later changes won’t affect it.</div>`;document.getElementById("vview").innerHTML="";return;}
-  box.innerHTML=`<div class="tablebox"><table class="vlist"><thead><tr><th>Version</th><th>Main price list</th><th>Saved</th><th>₹/£</th><th>Avg margin</th><th></th></tr></thead><tbody>${versions.map(v=>{const st=vStats(v,v.list);
+  box.innerHTML=`<div class="tablebox"><table class="vlist"><thead><tr><th>Version</th><th>Main price list</th><th>Saved</th><th>₹/£</th><th>Variables</th><th>Avg margin</th><th></th></tr></thead><tbody>${versions.map(v=>{const st=vStats(v,v.list);
     return `<tr class="${v.id===vSel?"on":""}" data-v="${v.id}"><td class="name"><b>${esc(v.name)}</b>${v.note?`<span class="vnote">${esc(v.note)}</span>`:""}</td>
-    <td>${esc(listNameOf(v.list,v.customers))}</td><td class="num muted">${fdt(v.created)}</td><td class="num">${v.fx.gbpinr}</td>
+    <td>${esc(listNameOf(v.list,v.customers))}</td><td class="num muted">${fdt(v.created)}</td><td class="num">${v.fx.gbpinr}</td><td class="muted" style="font-size:12px">${(()=>{const i=varsInfo(v);return i.nNow?`${i.nNow} differ from now`:"same as now";})()}</td>
     <td><span class="pill ${mClass(st.avg)}">${pct(st.avg)}</span> <span class="muted" style="font-size:12px">${st.n} SKU${st.n===1?"":"s"}</span></td>
-    <td><div class="acts"><button data-act="view">${v.id===vSel?"Hide":"View"}</button><button data-act="restore">${vArm[v.id+"restore"]?"Click again: replaces working copy":"Restore"}</button><button data-act="delete">${vArm[v.id+"delete"]?"Click again to delete":"Delete"}</button></div></td></tr>`;}).join("")}</tbody></table></div>`;
+    <td><div class="acts"><button data-act="view">${v.id===vSel?"Hide":"View"}</button><button data-act="restore" title="Replace the numbers in the tool with this version. Your current work is saved as a version first.">${vArm[v.id+"restore"]?"Click again: current work is saved first":"Load into tool"}</button><button data-act="delete">${vArm[v.id+"delete"]?"Click again to delete":"Delete"}</button></div></td></tr>`;}).join("")}</tbody></table></div>`;
   renderVersionView();
 }
 document.getElementById("vlist").addEventListener("click",e=>{
@@ -828,9 +846,33 @@ document.getElementById("vlist").addEventListener("click",e=>{
   if(!vArm[k]){vArm={};vArm[k]=true;renderVersions();setTimeout(()=>{if(vArm[k]){delete vArm[k];renderVersions();}},4000);return;}
   vArm={};
   if(act==="delete"){versions=versions.filter(x=>x.id!==id); if(vSel===id)vSel=null; saveVersions(); renderVersions(); toast(`Deleted “${v.name}”`); return;}
-  if(act==="restore"){const st=JSON.parse(JSON.stringify(v.state)); Object.assign(state,{A:Object.assign({},DEFAULT_A,st.A),skus:st.skus,customers:st.customers,commissions:st.commissions,target:st.target,list:v.list});
-    save(); quoteVal=null; document.getElementById("agrid").innerHTML=""; renderAll(); setTab("skus"); toast(`Restored “${v.name}” as your working copy`);}
+  if(act==="restore"){
+    const auto=makeVersion(`Auto-saved before loading “${v.name}”`,"Your working copy as it was just before a saved version was loaded into the tool.",state.list);
+    versions.unshift(auto); if(!saveVersions()){versions.shift();return;}
+    const st=JSON.parse(JSON.stringify(v.state)); Object.assign(state,{A:Object.assign({},DEFAULT_A,st.A),skus:st.skus,customers:st.customers,commissions:st.commissions,target:st.target,list:v.list});
+    save(); quoteVal=null; document.getElementById("agrid").innerHTML=""; renderAll(); setTab("skus"); toast(`Loaded “${v.name}” into the tool. Your previous work is saved as “${auto.name}”.`);}
 });
+function commText(L,fallback){if(!L)return fallback; const n=Object.keys(L.by||{}).length; if(L.all!=null)return `${L.all}% on all SKUs`+(n?`, ${n} SKU${n>1?"s":""} set individually`:""); return n?`${fallback}, ${n} SKU${n>1?"s":""} changed`:fallback;}
+function varsInfo(v){
+  const VA=Object.assign({},DEFAULT_A,v.state.A), CA=state.A;
+  const keys=GROUPS.flatMap(g=>g.f.map(f=>f[0]));
+  return {VA,CA,nNow:keys.filter(k=>VA[k]!==CA[k]).length,nSheet:keys.filter(k=>VA[k]!==DEFAULT_A[k]).length};
+}
+function varsPanel(v){
+  const {VA,CA,nNow,nSheet}=varsInfo(v), st=v.state, cm=st.commissions||{};
+  const fw=(st.skus||[]).filter(x=>x.range==="Sarva · Floorwise"), fwT=fw.filter(x=>x.auto).length;
+  const groups=GROUPS.map(g=>`<div class="vgrp"><h4>${g.t}</h4><dl>${g.f.map(([k,l,u])=>{const val=VA[k],now=CA[k];
+      return `<dt>${l}</dt><dd class="${val!==DEFAULT_A[k]?"chg":""}">${fmtIn(val)} <span class="u">${u}</span>${vCompare&&now!==val?`<span class="now">now ${fmtIn(now)}</span>`:""}</dd>`;}).join("")}</dl></div>`).join("");
+  const pricing=`<div class="vgrp"><h4>Pricing settings</h4><dl>
+    <dt>Target margin</dt><dd>${st.target}%${vCompare&&state.target!==st.target?`<span class="now">now ${state.target}%</span>`:""}</dd>
+    <dt>Commission · Standard</dt><dd style="font-family:var(--f-body)">${esc(commText(cm.std,"Sheet rates"))}</dd>
+    ${(v.customers||[]).map(c=>`<dt>Commission · ${esc(c.name)}</dt><dd style="font-family:var(--f-body)">${esc(commText(cm[c.id],"Same as Standard"))}</dd>`).join("")}
+    ${fw.length?`<dt>Floorwise prices</dt><dd style="font-family:var(--f-body)">${fwT===fw.length?"All at target":`${fw.length-fwT} typed, ${fwT} at target`}</dd>`:""}
+  </dl></div>`;
+  return `<details class="vvars" open><summary>Variables used in this version<span class="meta">${nSheet?`${nSheet} differ from the sheet`:"all as in the sheet"}${vCompare?` · ${nNow?`${nNow} differ from now`:"same as now"}`:""}</span></summary>
+    <div class="vlegend"><b>Blue</b> = changed from the sheet${vCompare?" · <i>now …</i> = today’s value in the tool, where it differs":". Tick Compare with current to see which differ from today."}</div>
+    <div class="vgrid">${pricing}${groups}</div></details>`;
+}
 function renderVersionView(){
   const box=document.getElementById("vview"), v=versions.find(x=>x.id===vSel);
   if(!v){box.innerHTML="";return;}
@@ -853,12 +895,15 @@ function renderVersionView(){
     <div class="vtools"><div class="seg" role="group" aria-label="Price list in this version">${lists.map(l=>`<button data-vl="${l}" aria-pressed="${l===vList}">${esc(listNameOf(l,v.customers))}</button>`).join("")}</div>
       <label for="v-compare" style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="v-compare"${vCompare?" checked":""}> Compare with current</label>
       <button id="v-copy">Copy for Excel</button></div></div>
+    ${varsPanel(v)}
     <div class="tablebox"><table><thead><tr><th>SKU</th><th>Comm %</th><th>Ex-factory £</th><th>Landed £</th>${std?"":"<th>Standard £</th>"}<th>${std?"Selling price £":"Agreed selling price £"}</th><th>Profit £</th><th>Margin</th>${vCompare?"<th>Price now £</th><th>Margin now</th><th>Change</th>":""}</tr></thead><tbody>${body}</tbody></table></div>`;
   box.querySelectorAll("button[data-vl]").forEach(b=>b.addEventListener("click",()=>{vList=b.dataset.vl;renderVersionView();}));
   box.querySelector("#v-compare").addEventListener("change",e=>{vCompare=e.target.checked;renderVersionView();});
   box.querySelector("#v-copy").addEventListener("click",()=>{
     const pre=[["Sarva Price Desk – saved version"],["Version",v.name],["Saved",fdt(v.created)],["Price list",listNameOf(vList,v.customers)],["₹ per £",v.fx.gbpinr,"₹ per $",v.fx.usdinr,"Target margin %",v.target],...(v.note?[["Note",v.note]]:[]),[]];
-    copyText(tsv([...pre,...excelRows(rows,vList)]),`Copied “${v.name}” (${listNameOf(vList,v.customers)}). Paste into cell A1.`);});
+    const VA=Object.assign({},DEFAULT_A,v.state.A);
+    const vars=[[],["Variables used"],["Group","Variable","Value","Unit"],...GROUPS.flatMap(g=>g.f.map(([k,l,u])=>[g.t,l,VA[k],u]))];
+    copyText(tsv([...pre,...excelRows(rows,vList),...vars]),`Copied “${v.name}” (${listNameOf(vList,v.customers)}) with its variables. Paste into cell A1.`);});
 }
 document.getElementById("v-download").addEventListener("click",()=>{
   if(!versions.length){toast("No versions to back up yet");return;}
