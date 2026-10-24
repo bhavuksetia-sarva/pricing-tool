@@ -229,6 +229,9 @@ td input.comm.ov{border-color:var(--accent);color:var(--accent);font-weight:500}
 @media (max-width:900px){.skupanel{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .skupanel .chk{align-self:end}
 .danger{color:var(--bad);border-color:var(--bad)}
+button.sec-del{float:right;padding:3px 9px;font-family:var(--f-body);font-stretch:100%;font-size:12px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--bad);border-color:var(--line);background:var(--surface)}
+button.sec-del:hover:not(:disabled){border-color:var(--bad)}
+button.sec-del.armed{background:var(--bad);color:var(--surface);border-color:var(--bad)}
 .ptag{display:inline-block;margin-left:6px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;padding:1px 5px;border-radius:3px;background:var(--warn-soft);color:var(--warn);vertical-align:1px}
 .dpos{color:var(--good)} .dneg{color:var(--bad)}
 .unmatched{columns:2 220px;margin:6px 0 0;padding-left:18px}
@@ -606,6 +609,8 @@ function renderTable(){
       let extra="";
       if(std&&isTgt(s0)){const grp=state.skus.filter(x=>x.range===s.range&&isTgt(x)), nMan=grp.filter(x=>!x.auto).length;
         extra=nMan?`<button class="all-target" data-range="${esc(s.range)}">Set all ${grp.length} to target price</button><span class="grp-note">${nMan} typed price${nMan>1?"s":""}</span>`:`<span class="grp-note">All at target price (${state.target}% margin)</span>`;}
+      const nSec=state.skus.filter(x=>x.range===s.range).length;
+      extra+=`<button type="button" class="sec-del${delSecArm===s.range?" armed":""}" data-range="${esc(s.range)}" title="Remove every SKU in this section">${delSecArm===s.range?`Click again to delete all ${nSec} SKUs`:"Delete section"}</button>`;
       rows+=`<tr class="grp"><td colspan="${cols}">${esc(s.range)}${extra}</td></tr>`+headRow.replace("<tr>","<tr class=\"colhead\">");last=s.range;}
     const tag=lp.src==="target"?`<span class="tag target">= target</span>`:"";
     const gapTd=`<td class="num ${gap<-0.005?"gap-neg":"gap-pos"}">${isFinite(gap)?(gap>=0?"+":"")+gap.toFixed(2):"—"}</td>`;
@@ -640,7 +645,17 @@ function renderTable(){
   document.getElementById("s-disc-box").hidden=std||!nd;
   document.getElementById("s-disc").textContent=nd?"−"+(disc/nd*100).toFixed(1)+"%":"—";
 }
+let delSecArm=null;
 tbody.addEventListener("click",e=>{
+  const sd=e.target.closest("button.sec-del");
+  if(sd){const rg=sd.dataset.range;
+    if(delSecArm!==rg){delSecArm=rg;renderTable();setTimeout(()=>{if(delSecArm===rg){delSecArm=null;renderTable();}},4000);return;}
+    delSecArm=null; const gone=state.skus.filter(x=>x.range===rg), ids=new Set(gone.map(x=>x.id));
+    state.skus=state.skus.filter(x=>x.range!==rg);
+    state.customers.forEach(c=>ids.forEach(id=>delete c.prices[id]));
+    Object.values(state.commissions||{}).forEach(L=>L.by&&ids.forEach(id=>delete L.by[id]));
+    if(ids.has(state.sel))state.sel=(state.skus[0]||{}).id;
+    save(); renderAll(); toast(`Deleted the ${rg} section (${gone.length} SKUs). Saved versions that include it are unchanged.`); return;}
   const bt=e.target.closest("button.to-target");
   if(bt){const s=state.skus.find(x=>x.id===bt.dataset.id); s.auto=true; s.std=null; state.sel=s.id; save(); renderTable(); renderDetail(); renderNotes(); toast(`${s.name} is back on the target price`); return;}
   const ba=e.target.closest("button.all-target");
