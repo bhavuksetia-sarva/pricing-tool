@@ -167,6 +167,10 @@ td.date{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
 .commbar .state{color:var(--muted);font-size:12px}
 .commbar .state b{color:var(--accent);font-weight:600}
 td input.comm{width:58px}
+.pcell{display:inline-flex;align-items:center;gap:6px}
+button.to-target{padding:3px 7px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+button.all-target{margin-left:12px;padding:3px 9px;font-family:var(--f-body);font-stretch:100%;font-size:12px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--accent);border-color:var(--accent);background:var(--surface)}
+.grp-note{margin-left:8px;font-family:var(--f-body);font-stretch:100%;font-size:12px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)}
 td input.comm.ov{border-color:var(--accent);color:var(--accent);font-weight:500}
 .unmatched{columns:2 220px;margin:6px 0 0;padding-left:18px}
 </style>
@@ -217,7 +221,7 @@ td input.comm.ov{border-color:var(--accent);color:var(--accent);font-weight:500}
         </div>
         <aside class="detail" id="detail"></aside>
       </div>
-      <footer>£ per roll. Commission is set per price list; type in the Comm % column to give one SKU its own rate, or clear it to go back to the list rate. Ex-factory = foam, lamination, adhesive and polythene, before any haulage, freight or commission. Margin = profit ÷ selling price, after commission. “Price @ target” solves for the price that hits the target margin with commission recalculated on that price. Floorwise prices follow the target until you type a price. Edits are saved in this browser only.</footer>
+      <footer>£ per roll. Commission is set per price list; type in the Comm % column to give one SKU its own rate, or clear it to go back to the list rate. Ex-factory = foam, lamination, adhesive and polythene, before any haulage, freight or commission. Margin = profit ÷ selling price, after commission. “Price @ target” solves for the price that hits the target margin with commission recalculated on that price. Landed includes commission, so it moves by the commission rate when the price changes. Floorwise prices follow the target until you type a price; press Target (or clear the box) to switch back. Edits are saved in this browser only.</footer>
     </section>
 
     <section id="pane-assume" hidden>
@@ -297,7 +301,8 @@ const RAW=[
  ["royal","Kellars","Royal",145,10,400,"Wilkies White","Plain NW",7.5,0,1,38.33,"X",38.325],
  ["foil","Kellars","Wood Lam (Foil)",145,3,1400,"FOIL","Plain NW",7.5,0,1.2,14.7,"Y",14.7]
 ];
-function defaultSkus(){return RAW.map(r=>({id:r[0],range:r[1],name:r[2],density:r[3],mm:r[4],rolls:r[5],lam1:r[6],lam2:r[7],comm:r[8],cpoly:r[9],foamMult:r[10],std:r[11],auto:r[11]===null,col:r[12]||"",sheetPrice:r[13]??null}));}
+const isTgt=s=>!!s.tgt||s.range==="Sarva · Floorwise";
+function defaultSkus(){return RAW.map(r=>({tgt:r[11]===null,id:r[0],range:r[1],name:r[2],density:r[3],mm:r[4],rolls:r[5],lam1:r[6],lam2:r[7],comm:r[8],cpoly:r[9],foamMult:r[10],std:r[11],auto:r[11]===null,col:r[12]||"",sheetPrice:r[13]??null}));}
 
 // Customer deviations: Direct_container_pricing_1.xlsx › Deviations
 function defaultCustomers(){return [
@@ -432,14 +437,18 @@ function renderTable(){
     if(filt==="below"&&r.margin>=state.target/100-1e-9)continue;
     if(filt==="loss"&&r.profit>=0)continue;
     cnt++; sum+=r.margin; if(r.margin<state.target/100-1e-9)below++; if(r.profit<0)loss++;
-    if(s.range!==last){rows+=`<tr class="grp"><td colspan="${cols}">${esc(s.range)}</td></tr>`+headRow.replace("<tr>","<tr class=\"colhead\">");last=s.range;}
+    if(s.range!==last){
+      let extra="";
+      if(std&&isTgt(s0)){const grp=state.skus.filter(x=>x.range===s.range&&isTgt(x)), nMan=grp.filter(x=>!x.auto).length;
+        extra=nMan?`<button class="all-target" data-range="${esc(s.range)}">Set all ${grp.length} to target price</button><span class="grp-note">${nMan} typed price${nMan>1?"s":""}</span>`:`<span class="grp-note">All at target price (${state.target}% margin)</span>`;}
+      rows+=`<tr class="grp"><td colspan="${cols}">${esc(s.range)}${extra}</td></tr>`+headRow.replace("<tr>","<tr class=\"colhead\">");last=s.range;}
     const tag=lp.src==="target"?`<span class="tag target">= target</span>`:"";
     const gapTd=`<td class="num ${gap<-0.005?"gap-neg":"gap-pos"}">${isFinite(gap)?(gap>=0?"+":"")+gap.toFixed(2):"—"}</td>`;
     const common=`<td>${esc(s.name)}${tag}</td><td class="num muted">${s.density}</td><td class="num muted">${s.mm}</td>`;
     const priceVal=lp.src==="target"?lp.p.toFixed(2):lp.p;
     if(std){
       rows+=`<tr class="sku${s.id===state.sel?" sel":""}" data-id="${s.id}" tabindex="0">${common}<td class="num muted">${s.rolls}</td>${commTd(s)}
-      <td class="num"><input class="price${lp.src==="target"?" auto":""}" type="number" step="0.05" id="price-${s.id}" data-id="${s.id}" value="${priceVal}" aria-label="Standard price ${esc(s.name)}"></td>
+      <td class="num"><span class="pcell">${isTgt(s0)&&!s0.auto?`<button class="to-target" data-id="${s.id}" title="Switch to the target price">Target</button>`:""}<input class="price${lp.src==="target"?" auto":""}" type="number" step="0.05" id="price-${s.id}" data-id="${s.id}" value="${priceVal}" aria-label="Standard price ${esc(s.name)}"></span></td>
       <td class="num muted">${n2(r.exf)}</td><td class="num">${n2(r.total)}</td><td class="num ${r.profit<0?"gap-neg":""}">${n2(r.profit)}</td>
       <td><span class="pill ${mClass(r.margin)}">${pct(r.margin)}</span></td><td class="num">${n2(tp)}</td>${gapTd}</tr>`;
     }else{
@@ -465,6 +474,10 @@ function renderTable(){
   document.getElementById("s-disc").textContent=nd?"−"+(disc/nd*100).toFixed(1)+"%":"—";
 }
 tbody.addEventListener("click",e=>{
+  const bt=e.target.closest("button.to-target");
+  if(bt){const s=state.skus.find(x=>x.id===bt.dataset.id); s.auto=true; s.std=null; state.sel=s.id; save(); renderTable(); renderDetail(); renderNotes(); toast(`${s.name} is back on the target price`); return;}
+  const ba=e.target.closest("button.all-target");
+  if(ba){let n=0; state.skus.forEach(x=>{if(x.range===ba.dataset.range&&isTgt(x)&&!x.auto){x.auto=true;x.std=null;n++;}}); save(); renderTable(); renderDetail(); renderNotes(); toast(`${n} Floorwise price${n>1?"s":""} switched back to the target price`); return;}
   if(e.target.closest("input"))return;
   const tr=e.target.closest("tr.sku"); if(!tr)return; state.sel=tr.dataset.id; save(); renderTable(); renderDetail();
 });
@@ -477,8 +490,8 @@ tbody.addEventListener("change",e=>{
   const inp=e.target.closest("input.price"); if(!inp)return;
   const s=state.skus.find(x=>x.id===inp.dataset.id); const raw=inp.value.trim(); const v=parseFloat(raw);
   if(isStd()){
-    if(raw===""&&s.std===null){s.auto=true;}
-    else if(raw===""&&s.std!==null){return;}
+    if(raw===""&&isTgt(s)){s.auto=true;s.std=null;}
+    else if(raw===""){renderTable();return;}
     else if(isFinite(v)){s.std=v;s.auto=false;}
   }else{
     const cu=cust();
