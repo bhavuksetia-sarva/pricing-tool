@@ -302,7 +302,6 @@ button.sec-del.armed{background:var(--bad);color:var(--surface);border-color:var
         <div class="stat"><b id="s-avg">–</b><span>Avg margin</span></div>
         <div class="stat warn"><b id="s-below">–</b><span>Below target</span></div>
         <div class="stat bad"><b id="s-loss">–</b><span>Loss-making</span></div>
-        <div class="stat" id="s-disc-box" hidden><b id="s-disc">–</b><span>Avg discount vs standard</span></div>
         <div class="controls">
           <button type="button" class="addbtn" id="btn-addsku">+ Add SKU</button>
           <label for="target">Target margin <input id="target" type="number" step="0.5" style="width:64px"> %</label>
@@ -594,8 +593,8 @@ const thead=document.querySelector("#sku-table thead"), tbody=document.querySele
 function renderTable(){
   const A=state.A,D=derive(A),std=isStd(),cu=cust(),filt=std?state.filter:state.cfilter;
   const headRow=std?`<tr><th>SKU</th><th>Density</th><th>mm</th><th>Rolls/ctr</th><th>Comm %</th><th>Ex-factory £</th><th>Landed £</th><th>Selling price £</th><th>Profit £</th><th>Margin</th><th>Price @ target</th><th>Gap £</th></tr>`
-    :`<tr><th>SKU</th><th>Density</th><th>mm</th><th>Since</th><th>Comm %</th><th>Ex-factory £</th><th>Landed £</th><th>Standard £</th><th>Agreed selling price £</th><th>Discount</th><th>Profit £</th><th>Margin</th><th>Margin at std</th><th>Gap £</th></tr>`;
-  const cols=std?12:14;
+    :`<tr><th>SKU</th><th>Density</th><th>mm</th><th>Since</th><th>Comm %</th><th>Ex-factory £</th><th>Landed £</th><th>Standard £</th><th>Agreed selling price £</th><th>Profit £</th><th>Margin</th><th>Margin at std</th><th>Gap £</th></tr>`;
+  const cols=std?12:13;
   const commTd=s=>`<td class="num"><input class="comm${CL.by[s.id]!=null?" ov":""}" type="number" step="0.5" min="0" id="comm-${s.id}" data-id="${s.id}" value="${s.comm}" aria-label="Commission % ${esc(s.name)}" title="${CL.by[s.id]!=null?"Set for this SKU. Clear to use the list rate.":"List rate"}"></td>`;
   let rows="",last="",cnt=0,sum=0,below=0,loss=0,disc=0,nd=0;
   const CL=CLof(state.list);
@@ -630,7 +629,6 @@ function renderTable(){
       <td class="num muted">${n2(r.exf)}</td><td class="num">${n2(r.total)}</td>
       <td class="num muted">${n2(sp)}</td>
       <td class="num"><input class="price${lp.src!=="deal"?" auto":""}" type="number" step="0.05" id="cprice-${s.id}" data-id="${s.id}" value="${lp.src==="deal"?lp.p:""}" placeholder="${n2(lp.p)}" aria-label="Agreed price ${esc(s.name)}"></td>
-      <td class="num">${lp.src==="deal"?"−"+(d*100).toFixed(1)+"%":"<span class=\"muted\">std</span>"}</td>
       <td class="num ${r.profit<0?"gap-neg":""}">${n2(r.profit)}</td>
       <td><span class="pill ${mClass(r.margin)}">${pct(r.margin)}</span></td>
       <td class="num muted">${pct(rs.margin)}</td>${gapTd}</tr>`;
@@ -642,8 +640,6 @@ function renderTable(){
   document.getElementById("s-avg").textContent=cnt?pct(sum/cnt):"—";
   document.getElementById("s-below").textContent=below;
   document.getElementById("s-loss").textContent=loss;
-  document.getElementById("s-disc-box").hidden=std||!nd;
-  document.getElementById("s-disc").textContent=nd?"−"+(disc/nd*100).toFixed(1)+"%":"—";
 }
 let delSecArm=null;
 tbody.addEventListener("click",e=>{
