@@ -408,6 +408,7 @@ const RAW=[
  ["royal","Kellars","Royal",145,10,400,"Wilkies White","Plain NW",7.5,0,1,38.33,"X",38.325],
  ["foil","Kellars","Wood Lam (Foil)",145,3,1400,"FOIL","Plain NW",7.5,0,1.2,14.7,"Y",14.7]
 ];
+const hiddenIn=(cu,rg)=>!!cu&&(cu.hidden||[]).includes(rg);
 const isTgt=s=>!!s.tgt||s.range==="Sarva · Floorwise";
 function defaultSkus(){return RAW.map(r=>({tgt:r[11]===null,id:r[0],range:r[1],name:r[2],density:r[3],mm:r[4],rolls:r[5],lam1:r[6],lam2:r[7],comm:r[8],cpoly:r[9],foamMult:r[10],std:r[11],auto:r[11]===null,col:r[12]||"",sheetPrice:r[13]??null}));}
 
@@ -490,7 +491,7 @@ function renderLists(){
   const lists=[{id:"std",name:"Standard"}].concat(state.customers);
   document.getElementById("lists").innerHTML=lists.map(l=>`<button data-l="${l.id}" aria-pressed="${l.id===state.list}">${esc(l.name)}${l.id!=="std"?` <span class="muted">(${Object.keys(l.prices).length})</span>`:""}</button>`).join("")+`<button class="addbtn" id="btn-addcust" type="button">+ Customer</button>`;
   const cu=cust();
-  document.getElementById("list-hint").innerHTML=cu?`Agreed prices for ${esc(cu.full||cu.name)}. SKUs without a deal fall back to standard. <span class="listtools"><button type="button" id="cu-rename">Rename</button><button type="button" id="cu-delete" class="danger">${delCustArm?"Click again to delete this list":"Delete list"}</button></span>`:"Direct container price list, Sarva and Kellars.";
+  document.getElementById("list-hint").innerHTML=cu?`Agreed prices for ${esc(cu.full||cu.name)}. SKUs without a deal fall back to standard.${(cu.hidden||[]).length?` <b>${cu.hidden.length} section${cu.hidden.length>1?"s":""} removed</b> (${esc(cu.hidden.join(", "))})`:""} <span class="listtools">${(cu.hidden||[]).length?`<button type="button" id="cu-unhide">Show removed sections</button>`:""}<button type="button" id="cu-rename">Rename</button><button type="button" id="cu-delete" class="danger">${delCustArm?"Click again to delete this list":"Delete list"}</button></span>`:"Direct container price list, Sarva and Kellars.";
   const f=document.getElementById("filter");
   f.innerHTML=isStd()?`<option value="all">All SKUs</option><option value="below">Below target</option><option value="loss">Loss-making</option>`
     :`<option value="deals">Agreed prices only</option><option value="all">All SKUs</option><option value="below">Below target</option><option value="loss">Loss-making</option>`;
@@ -521,6 +522,7 @@ cp.addEventListener("submit",e=>{
 document.getElementById("list-hint").addEventListener("click",e=>{
   const c=cust(); if(!c)return;
   if(e.target.closest("#cu-rename")){openCust(c);return;}
+  if(e.target.closest("#cu-unhide")){const n=(c.hidden||[]).length; c.hidden=[]; save(); renderLists(); renderTable(); toast(`${n} section${n>1?"s":""} shown again in ${c.name}`); return;}
   if(e.target.closest("#cu-delete")){
     if(!delCustArm){delCustArm=true;renderLists();setTimeout(()=>{if(delCustArm){delCustArm=false;renderLists();}},4000);return;}
     delCustArm=false; state.customers=state.customers.filter(x=>x.id!==c.id); if(state.commissions)delete state.commissions[c.id];
@@ -599,6 +601,7 @@ function renderTable(){
   let rows="",last="",cnt=0,sum=0,below=0,loss=0,disc=0,nd=0;
   const CL=CLof(state.list);
   for(const s0 of state.skus){
+    if(hiddenIn(cu,s0.range))continue;
     const s=S(s0,state.list), lp=listPrice(s,state.list,A,D), r=cost(s,A,D,lp.p), tp=r.target(state.target), gap=lp.p-tp;
     if(filt==="deals"&&lp.src!=="deal")continue;
     if(filt==="below"&&r.margin>=state.target/100-1e-9)continue;
@@ -609,7 +612,9 @@ function renderTable(){
       if(std&&isTgt(s0)){const grp=state.skus.filter(x=>x.range===s.range&&isTgt(x)), nMan=grp.filter(x=>!x.auto).length;
         extra=nMan?`<button class="all-target" data-range="${esc(s.range)}">Set all ${grp.length} to target price</button><span class="grp-note">${nMan} typed price${nMan>1?"s":""}</span>`:`<span class="grp-note">All at target price (${state.target}% margin)</span>`;}
       const nSec=state.skus.filter(x=>x.range===s.range).length;
-      extra+=`<button type="button" class="sec-del${delSecArm===s.range?" armed":""}" data-range="${esc(s.range)}" title="Remove every SKU in this section">${delSecArm===s.range?`Click again to delete all ${nSec} SKUs`:"Delete section"}</button>`;
+      const armK=state.list+"|"+s.range, armed=delSecArm===armK;
+      extra+=std?`<button type="button" class="sec-del${armed?" armed":""}" data-range="${esc(s.range)}" title="Delete this section and its ${nSec} SKUs from every price list">${armed?`Click again: deletes ${nSec} SKUs from all price lists`:"Delete section"}</button>`
+        :`<button type="button" class="sec-del${armed?" armed":""}" data-range="${esc(s.range)}" title="Hide this section in ${esc(cu.name)} only. Standard and other customers keep it.">${armed?`Click again to remove from ${esc(cu.name)}`:"Remove from this list"}</button>`;
       rows+=`<tr class="grp"><td colspan="${cols}">${esc(s.range)}${extra}</td></tr>`+headRow.replace("<tr>","<tr class=\"colhead\">");last=s.range;}
     const tag=lp.src==="target"?`<span class="tag target">= target</span>`:"";
     const gapTd=`<td class="num ${gap<-0.005?"gap-neg":"gap-pos"}">${isFinite(gap)?(gap>=0?"+":"")+gap.toFixed(2):"—"}</td>`;
@@ -644,9 +649,17 @@ function renderTable(){
 let delSecArm=null;
 tbody.addEventListener("click",e=>{
   const sd=e.target.closest("button.sec-del");
-  if(sd){const rg=sd.dataset.range;
-    if(delSecArm!==rg){delSecArm=rg;renderTable();setTimeout(()=>{if(delSecArm===rg){delSecArm=null;renderTable();}},4000);return;}
-    delSecArm=null; const gone=state.skus.filter(x=>x.range===rg), ids=new Set(gone.map(x=>x.id));
+  if(sd){const rg=sd.dataset.range, armK=state.list+"|"+rg;
+    if(delSecArm!==armK){delSecArm=armK;renderTable();setTimeout(()=>{if(delSecArm===armK){delSecArm=null;renderTable();}},4000);return;}
+    delSecArm=null;
+    const cu=cust();
+    if(cu){const ids=new Set(state.skus.filter(x=>x.range===rg).map(x=>x.id)); let nd=0;
+      cu.hidden=[...new Set([...(cu.hidden||[]),rg])];
+      ids.forEach(id=>{if(cu.prices[id]){delete cu.prices[id];nd++;}});
+      const L=(state.commissions||{})[cu.id]; if(L&&L.by)ids.forEach(id=>delete L.by[id]);
+      save(); renderLists(); renderTable(); renderDetail(); renderNotes();
+      toast(`Removed ${rg} from ${cu.name}${nd?` (and its ${nd} agreed price${nd>1?"s":""})`:""}. Standard and other customers still have it.`); return;}
+    const gone=state.skus.filter(x=>x.range===rg), ids=new Set(gone.map(x=>x.id));
     state.skus=state.skus.filter(x=>x.range!==rg);
     state.customers.forEach(c=>ids.forEach(id=>delete c.prices[id]));
     Object.values(state.commissions||{}).forEach(L=>L.by&&ids.forEach(id=>delete L.by[id]));
@@ -893,7 +906,8 @@ function copyText(txt,msg){
 function buildRows(){
   const A=state.A,D=derive(A), out={};
   for(const l of ["std",...state.customers.map(c=>c.id)]){
-    out[l]=state.skus.map(s0=>{const s=S(s0,l), lp=listPrice(s,l,A,D), r=cost(s,A,D,lp.p);
+    const cl=l==="std"?null:state.customers.find(c=>c.id===l);
+    out[l]=state.skus.filter(s0=>!hiddenIn(cl,s0.range)).map(s0=>{const s=S(s0,l), lp=listPrice(s,l,A,D), r=cost(s,A,D,lp.p);
       return {id:s0.id,group:s0.range,name:s0.name,density:s0.density,mm:s0.mm,rolls:s0.rolls,lam:s0.lam1+(s0.lam2!=="None"?" + "+s0.lam2:""),
         comm:s.comm,exf:r.exf,haul:r.c.haul,ocean:r.c.ocean,uk:r.c.uk,commAmt:r.c.comm,landed:r.total,price:lp.p,src:lp.src,since:lp.d||"",
         std:stdPrice(s0,A,D),profit:r.profit,margin:r.margin,tgt:r.target(state.target)};});
@@ -995,6 +1009,7 @@ document.getElementById("vlist").addEventListener("click",e=>{
         if(l==="std")continue;
         const src=st.customers.find(c=>c.id===l); if(!src)continue;
         let cur=state.customers.find(c=>c.id===l); if(!cur){cur={id:src.id,name:src.name,full:src.full,prices:{}}; state.customers.push(cur);}
+        cur.hidden=[...(cur.hidden||[]).filter(r=>!G.has(r)),...(src.hidden||[]).filter(r=>G.has(r))];
         Object.keys(cur.prices).forEach(id=>{if(inG(id))delete cur.prices[id];});
         Object.entries(src.prices).forEach(([id,pv])=>{if(inG(id))cur.prices[id]=pv;});
       }
