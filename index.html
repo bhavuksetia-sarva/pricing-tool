@@ -166,7 +166,7 @@ td.date{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
 .commbar input{width:64px}
 .commbar .state{color:var(--muted);font-size:12px}
 .commbar .state b{color:var(--accent);font-weight:600}
-td input.comm{width:58px}
+td input.comm,td input.reb{width:58px}
 .pcell{display:inline-flex;align-items:center;gap:6px}
 button.to-target{padding:3px 7px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
 button.all-target{margin-left:12px;padding:3px 9px;font-family:var(--f-body);font-stretch:100%;font-size:12px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--accent);border-color:var(--accent);background:var(--surface)}
@@ -233,6 +233,23 @@ button.sec-del{float:right;padding:3px 9px;font-family:var(--f-body);font-stretc
 button.sec-del:hover:not(:disabled){border-color:var(--bad)}
 button.sec-del.armed{background:var(--bad);color:var(--surface);border-color:var(--bad)}
 .ptag{display:inline-block;margin-left:6px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;padding:1px 5px;border-radius:3px;background:var(--warn-soft);color:var(--warn);vertical-align:1px}
+.bulkpanel{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.bulkpanel textarea{min-height:120px;font-family:var(--f-mono);font-size:12px}
+.bulkpanel .or{display:flex;flex-direction:column;gap:8px;justify-content:flex-start}
+.bulkpanel .or .lab{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.bulkpanel .opts2{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.bulkpanel .opts2 label{flex-direction:row;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink)}
+.bulkpanel .opts2 input[type=date],.bulkpanel .opts2 input[type=checkbox]{width:auto;margin:0}
+.bulkpanel .opts2 label{display:inline-flex!important}
+.bprev{grid-column:1/-1}
+.bprev .bsum{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;margin-bottom:6px}
+.bprev .bsum b{font-weight:600}
+.bprev .bsum .bad{color:var(--bad)}
+.bprev table select{max-width:220px;font-size:12px;padding:2px 4px}
+.bprev tr.nomatch td{background:var(--bad-soft)}
+.bprev tr.dup td{background:var(--warn-soft)}
+.bprev .tablebox{max-height:360px;overflow:auto}
+@media (max-width:760px){.bulkpanel{grid-template-columns:1fr}}
 .dpos{color:var(--good)} .dneg{color:var(--bad)}
 .unmatched{columns:2 220px;margin:6px 0 0;padding-left:18px}
 </style>
@@ -279,6 +296,18 @@ button.sec-del.armed{background:var(--bad);color:var(--surface);border-color:var
         <label for="cp-full">Full company name<input id="cp-full" type="text" maxlength="100" placeholder="e.g. CARPETRIGHT LTD"></label>
         <div class="acts"><button type="submit" class="primary" id="cp-submit">Add price list</button><button type="button" id="cp-cancel">Cancel</button><span id="cp-msg">Starts with no agreed prices, so every SKU uses the standard price. Type agreed prices in the table. Commission follows Standard until you set it.</span></div>
       </form>
+      <form class="savepanel bulkpanel" id="bulkpanel" hidden>
+        <h3 id="bk-title">Bulk update prices</h3>
+        <label for="bk-paste">Paste from Excel: product name and price (other columns are ignored)<textarea id="bk-paste" placeholder="Footbliss 9&#9;24.68&#10;Footbliss 11&#9;27.83&#10;Footluxe 9&#9;33.08"></textarea></label>
+        <div class="or"><span class="lab">Or upload the price list</span><input type="file" id="bk-file" accept=".xlsx,.xls,.csv,.txt"><span class="muted" style="font-size:12px">.xlsx, .xls or .csv. The first sheet is read; each row needs a product name and a price. Header rows are skipped.</span></div>
+        <div class="opts2">
+          <label for="bk-date" id="bk-date-l">Effective date <input type="date" id="bk-date"></label>
+          <label for="bk-replace" id="bk-replace-l"><input type="checkbox" id="bk-replace"> Remove agreed prices for SKUs not in this list</label>
+          <label for="bk-snap"><input type="checkbox" id="bk-snap" checked> Save a version before updating</label>
+        </div>
+        <div class="bprev" id="bk-prev"></div>
+        <div class="acts"><button type="submit" class="primary" id="bk-apply" disabled>Update prices</button><button type="button" id="bk-cancel">Cancel</button><span id="bk-msg"></span></div>
+      </form>
       <form class="savepanel skupanel" id="skupanel" hidden>
         <h3>Add a SKU</h3>
         <label for="ns-group">Product section<select id="ns-group"></select></label>
@@ -303,7 +332,9 @@ button.sec-del.armed{background:var(--bad);color:var(--surface);border-color:var
         <div class="stat warn"><b id="s-below">–</b><span>Below target</span></div>
         <div class="stat bad"><b id="s-loss">–</b><span>Loss-making</span></div>
         <div class="controls">
+          <button type="button" class="addbtn" id="btn-bulk">Bulk update prices</button>
           <button type="button" class="addbtn" id="btn-addsku">+ Add SKU</button>
+          <label for="rebate-all">Rebate <input id="rebate-all" type="number" step="0.5" min="0" style="width:64px"> % for all SKUs</label>
           <label for="target">Target margin <input id="target" type="number" step="0.5" style="width:64px"> %</label>
           <label for="filter">Show <select id="filter"></select></label>
         </div>
@@ -317,7 +348,7 @@ button.sec-del.armed{background:var(--bad);color:var(--surface);border-color:var
         </div>
         <aside class="detail" id="detail"></aside>
       </div>
-      <footer>£ per roll. Commission is set per price list; type in the Comm % column to give one SKU its own rate, or clear it to go back to the list rate. Ex-factory = foam, lamination, adhesive and polythene, before any haulage, freight or commission. Margin = profit ÷ selling price, after commission. “Price @ target” solves for the price that hits the target margin with commission recalculated on that price. Landed includes commission, so it moves by the commission rate when the price changes. Floorwise prices follow the target until you type a price; press Target (or clear the box) to switch back. Edits are saved in this browser only; use Save version to keep a frozen copy.</footer>
+      <footer>£ per roll. Commission is set per price list; type in the Comm % column to give one SKU its own rate, or clear it to go back to the list rate. Ex-factory = foam, lamination, adhesive and polythene, before any haulage, freight or commission. Margin = profit ÷ selling price, after commission and rebate. Rebate is a % of the selling price, so it lowers the margin by the same number of points. “Price @ target” solves for the price that hits the target margin with commission recalculated on that price. Landed includes commission, so it moves by the commission rate when the price changes. Floorwise prices follow the target until you type a price; press Target (or clear the box) to switch back. Edits are saved in this browser only; use Save version to keep a frozen copy.</footer>
     </section>
 
     <section id="pane-assume" hidden>
@@ -421,7 +452,7 @@ function defaultCustomers(){return [
 ];}
 
 const KEY="floorwise-price-desk-v2";
-function fresh(){return {aVer:2,commissions:{std:{all:null,by:{}},fnc:{all:null,by:{}}},A:Object.assign({},DEFAULT_A),skus:defaultSkus(),customers:defaultCustomers(),target:15,sel:"bliss9",filter:"all",cfilter:"deals",list:"std",tab:"skus"};}
+function fresh(){return {aVer:2,rebates:{std:{all:null,by:{}},fnc:{all:null,by:{}}},commissions:{std:{all:null,by:{}},fnc:{all:null,by:{}}},A:Object.assign({},DEFAULT_A),skus:defaultSkus(),customers:defaultCustomers(),target:15,sel:"bliss9",filter:"all",cfilter:"deals",list:"std",tab:"skus"};}
 let state=load();
 function load(){
   try{const s=JSON.parse(localStorage.getItem(KEY)||"null");
@@ -460,10 +491,12 @@ function exCost(s,A,D){
   c.haul=D.haulCtr/rolls; c.ocean=D.oceanCtr/rolls; c.uk=D.ukCtr/rolls;
   return {c,weight,ex:c.foam+c.lam+c.adh+c.pack+c.haul+c.ocean+c.uk};
 }
-function targetPrice(s,A,D,m){const d=1-s.comm/100-m/100;return d>0?exCost(s,A,D).ex/d:NaN;}
+function targetPrice(s,A,D,m){const d=1-s.comm/100-(s.rebate||0)/100-m/100;return d>0?exCost(s,A,D).ex/d:NaN;}
 function CLof(list){if(!state.commissions)state.commissions={};return state.commissions[list]||(state.commissions[list]={all:null,by:{}});}
 function commOf(s,list){const L=CLof(list); if(L.by[s.id]!=null)return L.by[s.id]; if(L.all!=null)return L.all; return list==="std"?s.comm:commOf(s,"std");}
-function S(s,list){return Object.assign({},s,{comm:commOf(s,list)});}
+function RBof(list){if(!state.rebates)state.rebates={};return state.rebates[list]||(state.rebates[list]={all:null,by:{}});}
+function rebateOf(s,list){const L=RBof(list); if(L.by[s.id]!=null)return L.by[s.id]; if(L.all!=null)return L.all; return 0;}
+function S(s,list){return Object.assign({},s,{comm:commOf(s,list),rebate:rebateOf(s,list)});}
 function stdPrice(s,A,D){return s.auto?targetPrice(S(s,"std"),A,D,state.target):s.std;}
 function listPrice(s,list,A,D){
   if(list!=="std"){const cu=state.customers.find(c=>c.id===list); const dv=cu&&cu.prices[s.id]; if(dv)return {p:dv.p,src:"deal",d:dv.d};}
@@ -471,9 +504,9 @@ function listPrice(s,list,A,D){
 }
 function cost(s,A,D,price){
   const e=exCost(s,A,D), c=Object.assign({},e.c);
-  c.comm=price*s.comm/100;
-  const total=e.ex+c.comm, profit=price-total;
-  return {c,ex:e.ex,exf:e.c.foam+e.c.lam+e.c.adh+e.c.pack,total,profit,margin:price?profit/price:0,weight:e.weight,price,target:m=>{const d=1-s.comm/100-m/100;return d>0?e.ex/d:NaN;}};
+  c.comm=price*s.comm/100; c.rebate=price*(s.rebate||0)/100;
+  const total=e.ex+c.comm, profit=price-total-c.rebate;
+  return {c,ex:e.ex,exf:e.c.foam+e.c.lam+e.c.adh+e.c.pack,total,profit,margin:price?profit/price:0,weight:e.weight,price,target:m=>{const d=1-s.comm/100-(s.rebate||0)/100-m/100;return d>0?e.ex/d:NaN;}};
 }
 
 // ---------- formatting ----------
@@ -496,7 +529,7 @@ function renderLists(){
   f.innerHTML=isStd()?`<option value="all">All SKUs</option><option value="below">Below target</option><option value="loss">Loss-making</option>`
     :`<option value="deals">Agreed prices only</option><option value="all">All SKUs</option><option value="below">Below target</option><option value="loss">Loss-making</option>`;
   f.value=isStd()?state.filter:state.cfilter;
-  renderCommBar();
+  renderCommBar(); syncRebateAll();
 }
 document.getElementById("lists").addEventListener("click",e=>{
   if(e.target.closest("#btn-addcust")){openCust(null);return;}
@@ -525,7 +558,7 @@ document.getElementById("list-hint").addEventListener("click",e=>{
   if(e.target.closest("#cu-unhide")){const n=(c.hidden||[]).length; c.hidden=[]; save(); renderLists(); renderTable(); toast(`${n} section${n>1?"s":""} shown again in ${c.name}`); return;}
   if(e.target.closest("#cu-delete")){
     if(!delCustArm){delCustArm=true;renderLists();setTimeout(()=>{if(delCustArm){delCustArm=false;renderLists();}},4000);return;}
-    delCustArm=false; state.customers=state.customers.filter(x=>x.id!==c.id); if(state.commissions)delete state.commissions[c.id];
+    delCustArm=false; state.customers=state.customers.filter(x=>x.id!==c.id); if(state.commissions)delete state.commissions[c.id]; if(state.rebates)delete state.rebates[c.id];
     state.list="std"; save(); renderAll(); toast(`Deleted the ${c.name} price list. Saved versions that include it are unchanged.`);
   }
 });
@@ -594,9 +627,11 @@ function renderCommBar(){
 const thead=document.querySelector("#sku-table thead"), tbody=document.querySelector("#sku-table tbody");
 function renderTable(){
   const A=state.A,D=derive(A),std=isStd(),cu=cust(),filt=std?state.filter:state.cfilter;
-  const headRow=std?`<tr><th>SKU</th><th>Density</th><th>mm</th><th>Rolls/ctr</th><th>Comm %</th><th>Ex-factory £</th><th>Landed £</th><th>Selling price £</th><th>Profit £</th><th>Margin</th><th>Price @ target</th><th>Gap £</th></tr>`
-    :`<tr><th>SKU</th><th>Density</th><th>mm</th><th>Since</th><th>Comm %</th><th>Ex-factory £</th><th>Landed £</th><th>Standard £</th><th>Agreed selling price £</th><th>Profit £</th><th>Margin</th><th>Margin at std</th><th>Gap £</th></tr>`;
-  const cols=std?12:13;
+  const headRow=std?`<tr><th>SKU</th><th>Density</th><th>mm</th><th>Rolls/ctr</th><th>Comm %</th><th>Rebate %</th><th>Ex-factory £</th><th>Landed £</th><th>Selling price £</th><th>Profit £</th><th>Margin</th><th>Price @ target</th><th>Gap £</th></tr>`
+    :`<tr><th>SKU</th><th>Density</th><th>mm</th><th>Since</th><th>Comm %</th><th>Rebate %</th><th>Ex-factory £</th><th>Landed £</th><th>Standard £</th><th>Agreed selling price £</th><th>Profit £</th><th>Margin</th><th>Margin at std</th><th>Gap £</th></tr>`;
+  const cols=std?13:14;
+  const RL=RBof(state.list);
+  const rebTd=s=>`<td class="num"><input class="reb" type="number" step="0.5" min="0" id="reb-${s.id}" data-id="${s.id}" value="${s.rebate}" aria-label="Rebate % ${esc(s.name)}"></td>`;
   const commTd=s=>`<td class="num"><input class="comm${CL.by[s.id]!=null?" ov":""}" type="number" step="0.5" min="0" id="comm-${s.id}" data-id="${s.id}" value="${s.comm}" aria-label="Commission % ${esc(s.name)}" title="${CL.by[s.id]!=null?"Set for this SKU. Clear to use the list rate.":"List rate"}"></td>`;
   let rows="",last="",cnt=0,sum=0,below=0,loss=0,disc=0,nd=0;
   const CL=CLof(state.list);
@@ -621,7 +656,7 @@ function renderTable(){
     const common=`<td>${esc(s.name)}${tag}</td><td class="num muted">${s.density}</td><td class="num muted">${s.mm}</td>`;
     const priceVal=lp.src==="target"?lp.p.toFixed(2):lp.p;
     if(std){
-      rows+=`<tr class="sku${s.id===state.sel?" sel":""}" data-id="${s.id}" tabindex="0">${common}<td class="num muted">${s.rolls}</td>${commTd(s)}
+      rows+=`<tr class="sku${s.id===state.sel?" sel":""}" data-id="${s.id}" tabindex="0">${common}<td class="num muted">${s.rolls}</td>${commTd(s)}${rebTd(s)}
       <td class="num muted">${n2(r.exf)}</td><td class="num">${n2(r.total)}</td>
       <td class="num"><span class="pcell">${isTgt(s0)&&!s0.auto?`<button class="to-target" data-id="${s.id}" title="Switch to the target price">Target</button>`:""}<input class="price${lp.src==="target"?" auto":""}" type="number" step="0.05" id="price-${s.id}" data-id="${s.id}" value="${priceVal}" aria-label="Standard price ${esc(s.name)}"></span></td>
       <td class="num ${r.profit<0?"gap-neg":""}">${n2(r.profit)}</td>
@@ -630,7 +665,7 @@ function renderTable(){
       const sp=stdPrice(s0,A,D), rs=cost(S(s0,"std"),A,D,sp), d=sp?(sp-lp.p)/sp:0;
       if(lp.src==="deal"){disc+=d;nd++;}
       rows+=`<tr class="sku${s.id===state.sel?" sel":""}" data-id="${s.id}" tabindex="0">${common}
-      <td class="date">${lp.d?fdate(lp.d):""}</td>${commTd(s)}
+      <td class="date">${lp.d?fdate(lp.d):""}</td>${commTd(s)}${rebTd(s)}
       <td class="num muted">${n2(r.exf)}</td><td class="num">${n2(r.total)}</td>
       <td class="num muted">${n2(sp)}</td>
       <td class="num"><input class="price${lp.src!=="deal"?" auto":""}" type="number" step="0.05" id="cprice-${s.id}" data-id="${s.id}" value="${lp.src==="deal"?lp.p:""}" placeholder="${n2(lp.p)}" aria-label="Agreed price ${esc(s.name)}"></td>
@@ -662,7 +697,7 @@ tbody.addEventListener("click",e=>{
     const gone=state.skus.filter(x=>x.range===rg), ids=new Set(gone.map(x=>x.id));
     state.skus=state.skus.filter(x=>x.range!==rg);
     state.customers.forEach(c=>ids.forEach(id=>delete c.prices[id]));
-    Object.values(state.commissions||{}).forEach(L=>L.by&&ids.forEach(id=>delete L.by[id]));
+    Object.values(state.commissions||{}).forEach(L=>L.by&&ids.forEach(id=>delete L.by[id])); Object.values(state.rebates||{}).forEach(L=>L.by&&ids.forEach(id=>delete L.by[id]));
     if(ids.has(state.sel))state.sel=(state.skus[0]||{}).id;
     save(); renderAll(); toast(`Deleted the ${rg} section (${gone.length} SKUs). Saved versions that include it are unchanged.`); return;}
   const bt=e.target.closest("button.to-target");
@@ -674,6 +709,10 @@ tbody.addEventListener("click",e=>{
 });
 tbody.addEventListener("keydown",e=>{const tr=e.target.closest("tr.sku");if(tr&&e.target===tr&&(e.key==="Enter"||e.key===" ")){e.preventDefault();tr.click();}});
 tbody.addEventListener("change",e=>{
+  const ri=e.target.closest("input.reb");
+  if(ri){const L=RBof(state.list), v=parseFloat(ri.value);
+    if(ri.value.trim()==="")delete L.by[ri.dataset.id]; else if(isFinite(v)&&v>=0)L.by[ri.dataset.id]=v; else return;
+    state.sel=ri.dataset.id; save(); renderTable(); renderDetail(); renderNotes(); return;}
   const ci=e.target.closest("input.comm");
   if(ci){const L=CLof(state.list), v=parseFloat(ci.value);
     if(ci.value.trim()==="")delete L.by[ci.dataset.id]; else if(isFinite(v)&&v>=0)L.by[ci.dataset.id]=v; else return;
@@ -703,10 +742,12 @@ function renderDetail(){
   const scale=Math.max(r.price,r.total);
   let bar="";
   for(const [k,,v] of SEG){const w=r.c[k]/scale*100; if(w>0) bar+=`<div style="width:${w}%;background:var(${v});opacity:${k==="ocean"?.8:k==="uk"?.6:1}"></div>`;}
+  if(r.c.rebate>0) bar+=`<div style="width:${r.c.rebate/scale*100}%;background:var(--warn)"></div>`;
   if(r.profit>0) bar+=`<div style="width:${r.profit/scale*100}%;background:var(--profit)"></div>`;
   let kv="";
   for(const [k,l,v] of SEG){kv+=`<dt><span class="sw" style="background:var(${v})"></span>${l}</dt><dd>${n2(r.c[k])}</dd>`; if(k==="pack")kv+=`<dt class="tot">Ex-factory cost</dt><dd class="tot">${gbp(r.exf)}</dd>`;}
   kv+=`<dt class="tot">Landed cost</dt><dd class="tot">${gbp(r.total)}</dd>`;
+  if(r.c.rebate>0)kv+=`<dt><span class="sw" style="background:var(--warn)"></span>Rebate (${s.rebate}%)</dt><dd>${n2(r.c.rebate)}</dd>`;
   kv+=`<dt><span class="sw" style="background:var(${r.profit<0?"--loss":"--profit"})"></span>Profit</dt><dd class="${r.profit<0?"gap-neg":""}">${gbp(r.profit)} · ${pct(r.margin)}</dd>`;
   const ctrKg=r.weight*s.rolls;
   const opt=v=>LAMS.map(o=>`<option${o===v?" selected":""}>${o}</option>`).join("");
@@ -724,7 +765,7 @@ function renderDetail(){
   const listName=isStd()?"standard price":esc(cust().name)+(lp.src==="deal"?" price":" (standard)");
   box.innerHTML=`
    <div><h2>${esc(s.name)}</h2>
-   <div class="sub">${s.range} · ${s.density} kg/m³ · ${s.mm} mm · ${s.lam1} + ${s.lam2} · ${s.comm}% commission</div></div>
+   <div class="sub">${s.range} · ${s.density} kg/m³ · ${s.mm} mm · ${s.lam1} + ${s.lam2} · ${s.comm}% commission${s.rebate?` · ${s.rebate}% rebate`:""}</div></div>
    <div><p class="section-title">Where the ${listName} of ${gbp(lp.p)} goes</p>
      <div class="stack" role="img" aria-label="Cost stack against price">${bar}</div>
      <div class="stack-scale"><span>£0</span><span>${gbp(scale)}</span></div></div>
@@ -767,7 +808,7 @@ function renderDetail(){
   box.querySelector("#sku-del").addEventListener("click",()=>{
     if(delSkuArm!==s0.id){delSkuArm=s0.id;renderDetail();setTimeout(()=>{if(delSkuArm===s0.id){delSkuArm=null;renderDetail();}},4000);return;}
     delSkuArm=null; const i=state.skus.indexOf(s0); state.skus.splice(i,1); state.customers.forEach(c=>delete c.prices[s0.id]);
-    Object.values(state.commissions||{}).forEach(L=>L.by&&delete L.by[s0.id]);
+    Object.values(state.commissions||{}).forEach(L=>L.by&&delete L.by[s0.id]); Object.values(state.rebates||{}).forEach(L=>L.by&&delete L.by[s0.id]);
     state.sel=(state.skus[Math.min(i,state.skus.length-1)]||{}).id; save(); renderAll(); toast(`Removed ${s0.name}. Saved versions that include it are unchanged.`);
   });
   box.querySelectorAll(".fields [data-k]").forEach(el=>el.addEventListener("change",()=>{
@@ -881,6 +922,12 @@ function syncFx(){document.getElementById("fx-gbpinr").value=state.A.gbpinr;docu
   const v=parseFloat(e.target.value); if(!isFinite(v)||v<=0)return; state.A[k]=v; save(); renderAll();
 }));
 const tEl=document.getElementById("target");
+const rbEl=document.getElementById("rebate-all");
+function syncRebateAll(){const L=RBof(state.list); rbEl.value=L.all??""; rbEl.placeholder="0";}
+rbEl.addEventListener("change",()=>{const L=RBof(state.list), raw=rbEl.value.trim(), v=parseFloat(raw);
+  if(raw===""){L.all=null;L.by={};} else if(isFinite(v)&&v>=0){L.all=v;L.by={};} else return;
+  save(); quoteVal=null; renderTable(); renderDetail(); renderNotes();
+  toast(raw===""?`Rebate cleared for ${listNameOf(state.list)}`:`${v}% rebate on all SKUs in ${listNameOf(state.list)}. Change single SKUs in the Rebate % column.`);});
 tEl.addEventListener("change",()=>{const v=parseFloat(tEl.value); if(isFinite(v)){state.target=v;quoteVal=null;save();renderAll();}});
 document.getElementById("filter").addEventListener("change",e=>{if(isStd())state.filter=e.target.value;else state.cfilter=e.target.value;save();renderTable();});
 document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
@@ -909,7 +956,7 @@ function buildRows(){
     const cl=l==="std"?null:state.customers.find(c=>c.id===l);
     out[l]=state.skus.filter(s0=>!hiddenIn(cl,s0.range)).map(s0=>{const s=S(s0,l), lp=listPrice(s,l,A,D), r=cost(s,A,D,lp.p);
       return {id:s0.id,group:s0.range,name:s0.name,density:s0.density,mm:s0.mm,rolls:s0.rolls,lam:s0.lam1+(s0.lam2!=="None"?" + "+s0.lam2:""),
-        comm:s.comm,exf:r.exf,haul:r.c.haul,ocean:r.c.ocean,uk:r.c.uk,commAmt:r.c.comm,landed:r.total,price:lp.p,src:lp.src,since:lp.d||"",
+        comm:s.comm,rebate:s.rebate,rebateAmt:r.c.rebate,exf:r.exf,haul:r.c.haul,ocean:r.c.ocean,uk:r.c.uk,commAmt:r.c.comm,landed:r.total,price:lp.p,src:lp.src,since:lp.d||"",
         std:stdPrice(s0,A,D),profit:r.profit,margin:r.margin,tgt:r.target(state.target)};});
   }
   return out;
@@ -917,8 +964,8 @@ function buildRows(){
 const listNameOf=(id,customers)=>id==="std"?"Standard":((customers||state.customers).find(c=>c.id===id)||{}).name||id;
 function excelRows(rows,list){
   const std=list==="std";
-  const head=["Group","SKU","Density","Thickness mm","Rolls/container","Lamination","Commission %","Ex-factory £","India haulage £","Ocean £","UK inland £","Commission £","Landed £",...(std?[]:["Standard price £"]),std?"Selling price £":"Agreed selling price £",...(std?[]:["Price source","Agreed since"]),"Profit £","Margin %","Price @ target £"];
-  return [head,...rows.map(r=>[r.group,r.name,r.density,r.mm,r.rolls,r.lam,r.comm,r2(r.exf),r2(r.haul),r2(r.ocean),r2(r.uk),r2(r.commAmt),r2(r.landed),...(std?[]:[r2(r.std)]),r2(r.price),
+  const head=["Group","SKU","Density","Thickness mm","Rolls/container","Lamination","Commission %","Rebate %","Ex-factory £","India haulage £","Ocean £","UK inland £","Commission £","Landed £","Rebate £",...(std?[]:["Standard price £"]),std?"Selling price £":"Agreed selling price £",...(std?[]:["Price source","Agreed since"]),"Profit £","Margin %","Price @ target £"];
+  return [head,...rows.map(r=>[r.group,r.name,r.density,r.mm,r.rolls,r.lam,r.comm,r.rebate??0,r2(r.exf),r2(r.haul),r2(r.ocean),r2(r.uk),r2(r.commAmt),r2(r.landed),r2(r.rebateAmt??0),...(std?[]:[r2(r.std)]),r2(r.price),
     ...(std?[]:[r.src==="deal"?"Agreed":r.src==="target"?"Target":"Standard",r.since]),r2(r.profit),r1(r.margin),r2(r.tgt)])];
 }
 document.getElementById("btn-copy").addEventListener("click",()=>{
@@ -943,7 +990,7 @@ function makeVersion(name,note,list,lists,groups){
   return {id:"v"+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name,note,list:Ls.includes(list)?list:Ls[0],lists:Ls,groups:groups||groupsNow(),partial,
     created:new Date().toISOString(),target:state.target,fx:{gbpinr:state.A.gbpinr,usdinr:state.A.usdinr},
     customers:state.customers.map(c=>({id:c.id,name:c.name,full:c.full})),
-    state:JSON.parse(JSON.stringify({A:state.A,skus:state.skus,customers:state.customers,commissions:state.commissions,target:state.target})),
+    state:JSON.parse(JSON.stringify({A:state.A,skus:state.skus,customers:state.customers,commissions:state.commissions,rebates:state.rebates,target:state.target})),
     rows};
 }
 const sp=document.getElementById("savepanel");
@@ -997,7 +1044,7 @@ document.getElementById("vlist").addEventListener("click",e=>{
     const auto=makeVersion(`Auto-saved before loading “${v.name}”`,"Your working copy as it was just before a saved version was loaded into the tool.",state.list);
     versions.unshift(auto); if(!saveVersions()){versions.shift();return;}
     const st=JSON.parse(JSON.stringify(v.state));
-    if(!v.partial){Object.assign(state,{A:Object.assign({},DEFAULT_A,st.A),skus:st.skus,customers:st.customers,commissions:st.commissions,target:st.target,list:v.list});}
+    if(!v.partial){Object.assign(state,{A:Object.assign({},DEFAULT_A,st.A),skus:st.skus,customers:st.customers,commissions:st.commissions,rebates:st.rebates||{},target:st.target,list:v.list});}
     else{
       const G=new Set(v.groups), inG=id=>{const x=st.skus.find(k=>k.id===id)||state.skus.find(k=>k.id===id); return x&&G.has(x.range);};
       state.A=Object.assign({},DEFAULT_A,st.A); state.target=st.target;
@@ -1006,6 +1053,7 @@ document.getElementById("vlist").addEventListener("click",e=>{
         if(i>=0){if(keepStd){sk.std=state.skus[i].std; sk.auto=state.skus[i].auto;} state.skus[i]=sk;} else{let at=-1; state.skus.forEach((x,j)=>{if(x.range===sk.range)at=j;}); at<0?state.skus.push(sk):state.skus.splice(at+1,0,sk);}}
       for(const l of v.lists){
         if(st.commissions&&st.commissions[l])state.commissions[l]=st.commissions[l];
+        if(st.rebates&&st.rebates[l]){if(!state.rebates)state.rebates={}; state.rebates[l]=st.rebates[l];}
         if(l==="std")continue;
         const src=st.customers.find(c=>c.id===l); if(!src)continue;
         let cur=state.customers.find(c=>c.id===l); if(!cur){cur={id:src.id,name:src.name,full:src.full,prices:{}}; state.customers.push(cur);}
@@ -1032,6 +1080,7 @@ function varsPanel(v){
     <dt>Target margin</dt><dd>${st.target}%${vCompare&&state.target!==st.target?`<span class="now">now ${state.target}%</span>`:""}</dd>
     <dt>Commission · Standard</dt><dd style="font-family:var(--f-body)">${esc(commText(cm.std,"Sheet rates"))}</dd>
     ${(v.customers||[]).map(c=>`<dt>Commission · ${esc(c.name)}</dt><dd style="font-family:var(--f-body)">${esc(commText(cm[c.id],"Same as Standard"))}</dd>`).join("")}
+    ${["std",...(v.customers||[]).map(c=>c.id)].map(l=>{const L=(st.rebates||{})[l]; const n=L?Object.keys(L.by||{}).length:0; const t=!L||(L.all==null&&!n)?"None":(L.all!=null?`${L.all}% on all SKUs`:"Per SKU")+(n?`, ${n} SKU${n>1?"s":""} set individually`:""); return `<dt>Rebate · ${esc(listNameOf(l,v.customers))}</dt><dd style="font-family:var(--f-body)">${esc(t)}</dd>`;}).join("")}
     ${fw.length?`<dt>Floorwise prices</dt><dd style="font-family:var(--f-body)">${fwT===fw.length?"All at target":`${fw.length-fwT} typed, ${fwT} at target`}</dd>`:""}
   </dl></div>`;
   return `<details class="vvars" open><summary>Variables used in this version<span class="meta">${nSheet?`${nSheet} differ from the sheet`:"all as in the sheet"}${vCompare?` · ${nNow?`${nNow} differ from now`:"same as now"}`:""}</span></summary>
@@ -1044,13 +1093,13 @@ function renderVersionView(){
   const lists=Object.keys(v.rows); if(!lists.includes(vList))vList=v.list;
   const rows=v.rows[vList]||[], std=vList==="std";
   const nowRows=vCompare?(buildRows()[vList]||[]):[], nowBy=Object.fromEntries(nowRows.map(r=>[r.id,r]));
-  const cols=8+(std?0:1)+(vCompare?3:0);
+  const cols=9+(std?0:1)+(vCompare?3:0);
   let body="",last="";
   for(const r of rows){
     if(r.group!==last){body+=`<tr class="grp"><td colspan="${cols}">${esc(r.group)}</td></tr>`;last=r.group;}
     const n=nowBy[r.id], dm=n?(n.margin-r.margin)*100:NaN;
     const tag=r.src==="deal"?`<span class="tag deal">agreed</span>`:r.src==="target"?`<span class="tag target">= target</span>`:(std?"":`<span class="tag std">std</span>`);
-    body+=`<tr><td>${esc(r.name)}${tag}</td><td class="num muted">${r.comm}</td><td class="num muted">${n2(r.exf)}</td><td class="num">${n2(r.landed)}</td>
+    body+=`<tr><td>${esc(r.name)}${tag}</td><td class="num muted">${r.comm}</td><td class="num muted">${r.rebate??0}</td><td class="num muted">${n2(r.exf)}</td><td class="num">${n2(r.landed)}</td>
       ${std?"":`<td class="num muted">${n2(r.std)}</td>`}<td class="num"><b style="font-weight:600">${n2(r.price)}</b></td><td class="num ${r.profit<0?"gap-neg":""}">${n2(r.profit)}</td>
       <td><span class="pill ${mClass(r.margin)}">${pct(r.margin)}</span></td>
       ${vCompare?(n?`<td class="num">${n2(n.price)}</td><td><span class="pill ${mClass(n.margin)}">${pct(n.margin)}</span></td><td class="num ${dm>0.05?"dpos":dm<-0.05?"dneg":"muted"}">${(dm>=0?"+":"")+dm.toFixed(1)} pts</td>`:`<td class="muted" colspan="3">not in current list</td>`):""}</tr>`;
@@ -1061,7 +1110,7 @@ function renderVersionView(){
       <label for="v-compare" style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="v-compare"${vCompare?" checked":""}> Compare with current</label>
       <button id="v-copy">Copy for Excel</button></div></div>
     ${varsPanel(v)}
-    <div class="tablebox"><table><thead><tr><th>SKU</th><th>Comm %</th><th>Ex-factory £</th><th>Landed £</th>${std?"":"<th>Standard £</th>"}<th>${std?"Selling price £":"Agreed selling price £"}</th><th>Profit £</th><th>Margin</th>${vCompare?"<th>Price now £</th><th>Margin now</th><th>Change</th>":""}</tr></thead><tbody>${body}</tbody></table></div>`;
+    <div class="tablebox"><table><thead><tr><th>SKU</th><th>Comm %</th><th>Rebate %</th><th>Ex-factory £</th><th>Landed £</th>${std?"":"<th>Standard £</th>"}<th>${std?"Selling price £":"Agreed selling price £"}</th><th>Profit £</th><th>Margin</th>${vCompare?"<th>Price now £</th><th>Margin now</th><th>Change</th>":""}</tr></thead><tbody>${body}</tbody></table></div>`;
   box.querySelectorAll("button[data-vl]").forEach(b=>b.addEventListener("click",()=>{vList=b.dataset.vl;renderVersionView();}));
   box.querySelector("#v-compare").addEventListener("change",e=>{vCompare=e.target.checked;renderVersionView();});
   box.querySelector("#v-copy").addEventListener("click",()=>{
@@ -1087,6 +1136,83 @@ document.getElementById("v-file").addEventListener("change",e=>{
     }catch(_){toast("That file isn’t a Sarva Price Desk backup");}
     e.target.value="";};
   rd.readAsText(f);
+});
+
+// ---------- bulk price update ----------
+const bkp=document.getElementById("bulkpanel");
+let bulkRows=[], bulkSrc="";
+const normN=t=>String(t??"").toLowerCase().replace(/\(.*?\)/g,"").replace(/(\d)\s*mm\b/g,"$1").replace(/[^a-z0-9.]/g,"").replace(/\.$/,"");
+const ALIAS={pluse:"pulse",footopus10:"opus10",opus:"opus10",woodlam:"woodlam",foil:"woodlam"};
+function skuIndex(){const m={}; state.skus.forEach(s=>{m[normN(s.name)]=s.id;}); return m;}
+function toNum(v){if(typeof v==="number")return v; const t=String(v??"").replace(/[£,\s]/g,""); return /^-?\d+(\.\d+)?$/.test(t)?parseFloat(t):NaN;}
+function parseGrid(grid){
+  const idx=skuIndex(), out=[];
+  for(const row of grid){
+    const cells=(row||[]).map(c=>c==null?"":c); const ni=cells.findIndex(c=>typeof c==="string"&&/[a-z]/i.test(c));
+    if(ni<0)continue;
+    let price=NaN; for(let j=ni+1;j<cells.length;j++){const v=toNum(cells[j]); if(isFinite(v)&&v>0){price=v;break;}}
+    if(!isFinite(price))continue;
+    const name=String(cells[ni]).trim(), key=normN(name);
+    out.push({name,price,id:idx[key]||idx[ALIAS[key]]||""});
+  }
+  return out;
+}
+function openBulk(){
+  const cu=cust(); document.getElementById("bk-title").textContent=`Bulk update prices · ${cu?cu.name:"Standard price list"}`;
+  document.getElementById("bk-date-l").hidden=!cu; document.getElementById("bk-replace-l").hidden=!cu;
+  document.getElementById("bk-date").value=new Date().toISOString().slice(0,10); document.getElementById("bk-replace").checked=false;
+  document.getElementById("bk-paste").value=""; document.getElementById("bk-file").value=""; bulkRows=[]; renderBulk();
+  [cp,skp].forEach(f=>f.hidden=true); bkp.hidden=false; document.getElementById("bk-paste").focus();
+}
+document.getElementById("btn-bulk").addEventListener("click",()=>{bkp.hidden?openBulk():bkp.hidden=true;});
+document.getElementById("bk-cancel").addEventListener("click",()=>{bkp.hidden=true;});
+document.getElementById("bk-paste").addEventListener("input",e=>{
+  const grid=e.target.value.split(/\r?\n/).map(l=>l.split(l.includes("\t")?"\t":/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c=>c.replace(/^"|"$/g,"").trim()));
+  bulkRows=parseGrid(grid); bulkSrc="pasted"; renderBulk();
+});
+function loadXLSX(){return window.XLSX?Promise.resolve(window.XLSX):new Promise((res,rej)=>{const sc=document.createElement("script");sc.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";sc.onload=()=>res(window.XLSX);sc.onerror=rej;document.head.appendChild(sc);});}
+document.getElementById("bk-file").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const rd=new FileReader();
+  if(/\.(csv|txt)$/i.test(f.name)){rd.onload=()=>{document.getElementById("bk-paste").value=rd.result; document.getElementById("bk-paste").dispatchEvent(new Event("input"));}; rd.readAsText(f); return;}
+  rd.onload=()=>{loadXLSX().then(X=>{const wb=X.read(new Uint8Array(rd.result),{type:"array"}); const ws=wb.Sheets[wb.SheetNames[0]];
+      bulkRows=parseGrid(X.utils.sheet_to_json(ws,{header:1,raw:true,defval:""})); bulkSrc=f.name; renderBulk();})
+    .catch(()=>toast("Couldn’t read that file. Copy the two columns from Excel and paste them instead."));};
+  rd.readAsArrayBuffer(f);
+});
+function renderBulk(){
+  const box=document.getElementById("bk-prev"), apply=document.getElementById("bk-apply"), A=state.A, D=derive(A), list=state.list, cu=cust();
+  if(!bulkRows.length){box.innerHTML=document.getElementById("bk-paste").value.trim()||bulkSrc?`<p class="muted" style="margin:0">No rows with a product name and a price found.</p>`:""; apply.disabled=true; document.getElementById("bk-msg").textContent=""; return;}
+  const seen={}, lastI={}; bulkRows.forEach((r,i)=>{if(r.id){seen[r.id]=(seen[r.id]||0)+1; lastI[r.id]=i;}});
+  const opts=id=>`<option value="">— skip this row —</option>`+groupsNow().map(g=>`<optgroup label="${esc(g)}">${state.skus.filter(x=>x.range===g).map(x=>`<option value="${x.id}"${x.id===id?" selected":""}>${esc(x.name)}</option>`).join("")}</optgroup>`).join("");
+  let n=0,up=0,down=0,miss=0;
+  const body=bulkRows.map((r,i)=>{
+    if(!r.id){miss++; return `<tr class="nomatch"><td>${esc(r.name)}</td><td><select data-i="${i}">${opts("")}</select></td><td class="num muted">—</td><td class="num">${n2(r.price)}</td><td class="muted">Not matched: pick a SKU or leave it skipped</td><td></td></tr>`;}
+    const isLast=lastI[r.id]===i; const s0=state.skus.find(x=>x.id===r.id), s=S(s0,list), cur=listPrice(s,list,A,D), ch=r.price-cur.p;
+    if(isLast){n++; if(ch>0.004)up++; else if(ch<-0.004)down++;}
+    const m=cost(s,A,D,r.price).margin, hidden=hiddenIn(cu,s0.range);
+    return `<tr class="${seen[r.id]>1?"dup":""}"><td>${esc(r.name)}</td><td><select data-i="${i}">${opts(r.id)}</select>${seen[r.id]>1?` <span class="ptag">${isLast?"listed more than once, this row is used":"listed again below, this row is ignored"}</span>`:""}${hidden?` <span class="ptag">section will be shown again</span>`:""}</td>
+      <td class="num muted">${n2(cur.p)}${cu&&cur.src!=="deal"?" <small>std</small>":""}</td><td class="num"><b style="font-weight:600">${n2(r.price)}</b></td>
+      <td class="num ${ch>0.004?"dpos":ch<-0.004?"dneg":"muted"}">${(ch>=0?"+":"")+ch.toFixed(2)}</td><td><span class="pill ${mClass(m)}">${pct(m)}</span></td></tr>`;}).join("");
+  box.innerHTML=`<div class="bsum"><span><b>${n}</b> price${n===1?"":"s"} to update</span><span>${up} up · ${down} down · ${n-up-down} unchanged</span>${miss?`<span class="bad"><b>${miss}</b> not matched</span>`:""}</div>
+    <div class="tablebox"><table><thead><tr><th>Name in your list</th><th>Matched SKU</th><th>Current £</th><th>New £</th><th>Change</th><th>New margin</th></tr></thead><tbody>${body}</tbody></table></div>`;
+  box.querySelectorAll("select[data-i]").forEach(sel=>sel.addEventListener("change",()=>{bulkRows[+sel.dataset.i].id=sel.value; renderBulk();}));
+  apply.disabled=!n; apply.textContent=`Update ${n} price${n===1?"":"s"}`;
+  document.getElementById("bk-msg").textContent=cu?`Sets agreed prices for ${cu.name}. Standard and other customers aren’t changed.`:"Sets standard prices. Floorwise SKUs given a price stop following the target until you press Target.";
+}
+bkp.addEventListener("submit",e=>{
+  e.preventDefault();
+  const byId={}; bulkRows.forEach(r=>{if(r.id)byId[r.id]=r;}); const rows=Object.values(byId); if(!rows.length)return;
+  const cu=cust(), listName=cu?cu.name:"Standard", date=document.getElementById("bk-date").value||new Date().toISOString().slice(0,10);
+  if(document.getElementById("bk-snap").checked){versions.unshift(makeVersion(`Before bulk update – ${listName} – ${new Date().toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}`,`Prices as they were just before ${rows.length} were updated in bulk${bulkSrc&&bulkSrc!=="pasted"?" from "+bulkSrc:""}.`,state.list)); if(!saveVersions())versions.shift(); else renderVersions();}
+  let unhid=0;
+  if(cu){
+    if(document.getElementById("bk-replace").checked){const keep=new Set(rows.map(r=>r.id)); Object.keys(cu.prices).forEach(id=>{if(!keep.has(id))delete cu.prices[id];});}
+    rows.forEach(r=>{cu.prices[r.id]={p:r.price,d:date}; const rg=(state.skus.find(x=>x.id===r.id)||{}).range; if(hiddenIn(cu,rg)){cu.hidden=cu.hidden.filter(x=>x!==rg);unhid++;}});
+    if(state.cfilter!=="all")state.cfilter="deals";
+  }else rows.forEach(r=>{const s0=state.skus.find(x=>x.id===r.id); s0.std=r.price; s0.auto=false;});
+  bkp.hidden=true; save(); renderAll();
+  toast(`Updated ${rows.length} ${listName} price${rows.length>1?"s":""}${document.getElementById("bk-snap").checked?". The previous prices are saved as a version":""}.`);
 });
 
 let tt; function toast(m){const t=document.getElementById("toast");t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,3200);}
