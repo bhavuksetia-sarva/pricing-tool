@@ -162,7 +162,7 @@ td input.price.auto{font-style:italic;color:var(--accent);border-style:dashed}
 .tag.deal{background:var(--good-soft);color:var(--good)}
 td.date{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
 .commbar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin:-4px 0 14px;padding:8px 12px;background:var(--surface);border:1px solid var(--line);border-radius:6px;font-size:13px}
-.commbar .lab{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.commbar .lab{min-width:190px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
 .commbar input{width:64px}
 .commbar .state{color:var(--muted);font-size:12px}
 .commbar .state b{color:var(--accent);font-weight:600}
@@ -325,7 +325,9 @@ button.sec-del.armed{background:var(--bad);color:var(--surface);border-color:var
         <label class="chk" for="ns-target"><input type="checkbox" id="ns-target"> Price at target margin</label>
         <div class="acts"><button type="submit" class="primary">Add SKU</button><button type="button" id="ns-cancel">Cancel</button><span>Uses the cost assumptions like every other SKU. You can change any of this later in the SKU panel.</span></div>
       </form>
+      <div class="commbar" id="tgtbar"></div>
       <div class="commbar" id="commbar"></div>
+      <div class="commbar" id="rebbar"></div>
       <div class="summary">
         <div class="stat"><b id="s-count">–</b><span id="s-count-l">SKUs</span></div>
         <div class="stat"><b id="s-avg">–</b><span>Avg margin</span></div>
@@ -334,8 +336,6 @@ button.sec-del.armed{background:var(--bad);color:var(--surface);border-color:var
         <div class="controls">
           <button type="button" class="addbtn" id="btn-bulk">Bulk update prices</button>
           <button type="button" class="addbtn" id="btn-addsku">+ Add SKU</button>
-          <label for="rebate-all">Rebate <input id="rebate-all" type="number" step="0.5" min="0" style="width:64px"> % for all SKUs</label>
-          <label for="target">Target margin <input id="target" type="number" step="0.5" style="width:64px"> %</label>
           <label for="filter">Show <select id="filter"></select></label>
         </div>
       </div>
@@ -452,7 +452,7 @@ function defaultCustomers(){return [
 ];}
 
 const KEY="floorwise-price-desk-v2";
-function fresh(){return {aVer:2,rebates:{std:{all:null,by:{}},fnc:{all:null,by:{}}},commissions:{std:{all:null,by:{}},fnc:{all:null,by:{}}},A:Object.assign({},DEFAULT_A),skus:defaultSkus(),customers:defaultCustomers(),target:15,sel:"bliss9",filter:"all",cfilter:"deals",list:"std",tab:"skus"};}
+function fresh(){return {aVer:2,targets:{std:{all:null,by:{}},fnc:{all:null,by:{}}},rebates:{std:{all:null,by:{}},fnc:{all:null,by:{}}},commissions:{std:{all:null,by:{}},fnc:{all:null,by:{}}},A:Object.assign({},DEFAULT_A),skus:defaultSkus(),customers:defaultCustomers(),target:15,sel:"bliss9",filter:"all",cfilter:"deals",list:"std",tab:"skus"};}
 let state=load();
 function load(){
   try{const s=JSON.parse(localStorage.getItem(KEY)||"null");
@@ -496,8 +496,10 @@ function CLof(list){if(!state.commissions)state.commissions={};return state.comm
 function commOf(s,list){const L=CLof(list); if(L.by[s.id]!=null)return L.by[s.id]; if(L.all!=null)return L.all; return list==="std"?s.comm:commOf(s,"std");}
 function RBof(list){if(!state.rebates)state.rebates={};return state.rebates[list]||(state.rebates[list]={all:null,by:{}});}
 function rebateOf(s,list){const L=RBof(list); if(L.by[s.id]!=null)return L.by[s.id]; if(L.all!=null)return L.all; return 0;}
-function S(s,list){return Object.assign({},s,{comm:commOf(s,list),rebate:rebateOf(s,list)});}
-function stdPrice(s,A,D){return s.auto?targetPrice(S(s,"std"),A,D,state.target):s.std;}
+function TGof(list){if(!state.targets)state.targets={};return state.targets[list]||(state.targets[list]={all:null,by:{}});}
+function targetOf(s,list){const L=TGof(list); if(L.by[s.id]!=null)return L.by[s.id]; if(L.all!=null)return L.all; return list==="std"?state.target:targetOf(s,"std");}
+function S(s,list){return Object.assign({},s,{comm:commOf(s,list),rebate:rebateOf(s,list),tm:targetOf(s,list)});}
+function stdPrice(s,A,D){return s.auto?targetPrice(S(s,"std"),A,D,targetOf(s,"std")):s.std;}
 function listPrice(s,list,A,D){
   if(list!=="std"){const cu=state.customers.find(c=>c.id===list); const dv=cu&&cu.prices[s.id]; if(dv)return {p:dv.p,src:"deal",d:dv.d};}
   return {p:stdPrice(s,A,D),src:s.auto?"target":"std"};
@@ -515,7 +517,7 @@ const n2=v=>isFinite(v)?v.toFixed(2):"—";
 const pct=v=>isFinite(v)?(v*100).toFixed(1)+"%":"—";
 const esc=s=>String(s).replace(/[&<>"]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
 const fdate=d=>{const [y,m,dd]=d.split("-");return `${+dd} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m-1]} ${y.slice(2)}`;};
-function mClass(m){const t=state.target/100-1e-9; return m<0?"bad":(m<t?"warn":"good");}
+function mClass(m,tm){const t=(tm??state.target)/100-1e-9; return m<0?"bad":(m<t?"warn":"good");}
 const isStd=()=>state.list==="std";
 const cust=()=>state.customers.find(c=>c.id===state.list);
 
@@ -529,7 +531,7 @@ function renderLists(){
   f.innerHTML=isStd()?`<option value="all">All SKUs</option><option value="below">Below target</option><option value="loss">Loss-making</option>`
     :`<option value="deals">Agreed prices only</option><option value="all">All SKUs</option><option value="below">Below target</option><option value="loss">Loss-making</option>`;
   f.value=isStd()?state.filter:state.cfilter;
-  renderCommBar(); syncRebateAll();
+  renderCommBar();
 }
 document.getElementById("lists").addEventListener("click",e=>{
   if(e.target.closest("#btn-addcust")){openCust(null);return;}
@@ -595,33 +597,44 @@ skp.addEventListener("submit",e=>{
 });
 
 // ---------- commission bar ----------
-let commScope="all";
-function renderCommBar(){
-  const L=CLof(state.list), std=isStd(), name=std?"Standard":cust().name;
-  const groups=[...new Set(state.skus.map(s=>s.range))];
-  const nOv=Object.keys(L.by).length;
-  let st;
-  if(L.all!=null) st=`<b>${L.all}%</b> on every SKU`+(nOv?`, <b>${nOv}</b> set individually`:"");
-  else if(nOv) st=std?`Sheet rates, <b>${nOv}</b> changed`:`Same as Standard, <b>${nOv}</b> changed`;
-  else st=std?"Sheet rates (2.5–7.5% by SKU)":"Same as Standard";
-  const custom=L.all!=null||nOv;
-  document.getElementById("commbar").innerHTML=`<span class="lab">Commission · ${esc(name)}</span>
-    <label for="comm-all" style="display:flex;gap:6px;align-items:center">Set <input id="comm-all" type="number" step="0.5" min="0" value="${L.all??""}" placeholder="%"> %</label>
-    <label for="comm-scope" style="display:flex;gap:6px;align-items:center">for <select id="comm-scope"><option value="all">all ${state.skus.length} SKUs</option>${groups.map(g=>`<option value="${esc(g)}"${commScope===g?" selected":""}>${esc(g)}</option>`).join("")}</select></label>
-    <button class="primary" id="comm-apply">Apply</button>
+const barScope={comm:"all",reb:"all",tgt:"all"};
+const BARS={
+  tgt:{el:"tgtbar",lab:"Target margin",get:l=>TGof(l),word:"target margin",
+    base:std=>std?`${state.target}% on all SKUs`:"Same as Standard", clear:std=>std?`Back to ${state.target}%`:"Same as Standard"},
+  comm:{el:"commbar",lab:"Commission",get:l=>CLof(l),word:"commission",
+    base:std=>std?"Sheet rates (2.5–7.5% by SKU)":"Same as Standard", clear:std=>std?"Use sheet rates":"Same as Standard"},
+  reb:{el:"rebbar",lab:"Rebate",get:l=>RBof(l),word:"rebate",
+    base:()=>"0% on all SKUs", clear:()=>"Clear rebates"}
+};
+function renderBar(kind){
+  const B=BARS[kind], L=B.get(state.list), std=isStd(), cu=cust(), name=std?"Standard":cu.name;
+  const skus=state.skus.filter(x=>!hiddenIn(cu,x.range)), groups=[...new Set(skus.map(x=>x.range))];
+  const nOv=Object.keys(L.by).length, custom=L.all!=null||nOv;
+  const st=L.all!=null?`<b>${L.all}%</b> on every SKU`+(nOv?`, <b>${nOv}</b> set individually`:""):(nOv?`${B.base(std)}, <b>${nOv}</b> set individually`:B.base(std));
+  let sc=barScope[kind]; if(sc!=="all"&&!groups.includes(sc)&&!skus.some(x=>"sku:"+x.id===sc))sc=barScope[kind]="all";
+  document.getElementById(B.el).innerHTML=`<span class="lab">${B.lab} · ${esc(name)}</span>
+    <label for="${kind}-val" style="display:flex;gap:6px;align-items:center">Set <input id="${kind}-val" type="number" step="0.5" min="0" placeholder="%"> %</label>
+    <label for="${kind}-scope" style="display:flex;gap:6px;align-items:center">for <select id="${kind}-scope"><option value="all">all ${skus.length} SKUs</option>
+      <optgroup label="Section">${groups.map(g=>`<option value="${esc(g)}">${esc(g)}</option>`).join("")}</optgroup>
+      ${groups.map(g=>`<optgroup label="${esc(g)} SKUs">${skus.filter(x=>x.range===g).map(x=>`<option value="sku:${x.id}">${esc(x.name)}</option>`).join("")}</optgroup>`).join("")}</select></label>
+    <button class="primary" id="${kind}-apply">Apply</button>
     <span class="state">${st}</span>
-    ${custom?`<button id="comm-clear">${std?"Use sheet rates":"Same as Standard"}</button>`:""}`;
-  if(commScope!=="all")document.getElementById("comm-scope").value=commScope;
-  document.getElementById("comm-scope").addEventListener("change",e=>{commScope=e.target.value;});
-  const apply=()=>{const v=parseFloat(document.getElementById("comm-all").value); if(!isFinite(v)||v<0){toast("Enter a commission % first");return;}
-    if(commScope==="all"){L.all=v;L.by={};toast(`${name}: ${v}% commission on all SKUs. Edit single SKUs in the Comm % column.`);}
-    else{const g=state.skus.filter(s=>s.range===commScope); g.forEach(s=>L.by[s.id]=v); toast(`${name}: ${v}% commission on ${g.length} ${commScope} SKUs`);}
-    save(); renderCommBar(); renderTable(); renderDetail(); renderNotes();};
-  document.getElementById("comm-apply").addEventListener("click",apply);
-  document.getElementById("comm-all").addEventListener("keydown",e=>{if(e.key==="Enter")apply();});
-  const c=document.getElementById("comm-clear");
-  if(c)c.addEventListener("click",()=>{L.all=null;L.by={};save();renderCommBar();renderTable();renderDetail();renderNotes();toast(std?"Back to the sheet’s commission rates":"Commission follows Standard again");});
+    ${custom?`<button id="${kind}-clear">${B.clear(std)}</button>`:""}`;
+  const selEl=document.getElementById(kind+"-scope"); selEl.value=sc;
+  selEl.addEventListener("change",e=>{barScope[kind]=e.target.value;});
+  const apply=()=>{const v=parseFloat(document.getElementById(kind+"-val").value); if(!isFinite(v)||v<0){toast(`Enter a ${B.word} % first`);return;}
+    const scp=barScope[kind];
+    if(scp==="all"){L.all=v;L.by={};toast(`${name}: ${v}% ${B.word} on all SKUs`);}
+    else if(scp.startsWith("sku:")){const id=scp.slice(4), x=state.skus.find(k=>k.id===id); L.by[id]=v; toast(`${name}: ${v}% ${B.word} on ${x?x.name:"1 SKU"}`);}
+    else{const g=skus.filter(x=>x.range===scp); g.forEach(x=>L.by[x.id]=v); toast(`${name}: ${v}% ${B.word} on ${g.length} ${scp} SKUs`);}
+    quoteVal=null; save(); renderBars(); renderTable(); renderDetail(); renderNotes();};
+  document.getElementById(kind+"-apply").addEventListener("click",apply);
+  document.getElementById(kind+"-val").addEventListener("keydown",e=>{if(e.key==="Enter")apply();});
+  const c=document.getElementById(kind+"-clear");
+  if(c)c.addEventListener("click",()=>{L.all=null;L.by={};quoteVal=null;save();renderBars();renderTable();renderDetail();renderNotes();toast(`${name}: ${B.lab.toLowerCase()} reset`);});
 }
+function renderBars(){renderBar("tgt");renderBar("comm");renderBar("reb");}
+function renderCommBar(){renderBars();}
 
 // ---------- SKU tab ----------
 const thead=document.querySelector("#sku-table thead"), tbody=document.querySelector("#sku-table tbody");
@@ -637,15 +650,15 @@ function renderTable(){
   const CL=CLof(state.list);
   for(const s0 of state.skus){
     if(hiddenIn(cu,s0.range))continue;
-    const s=S(s0,state.list), lp=listPrice(s,state.list,A,D), r=cost(s,A,D,lp.p), tp=r.target(state.target), gap=lp.p-tp;
+    const s=S(s0,state.list), lp=listPrice(s,state.list,A,D), r=cost(s,A,D,lp.p), tp=r.target(s.tm), gap=lp.p-tp;
     if(filt==="deals"&&lp.src!=="deal")continue;
-    if(filt==="below"&&r.margin>=state.target/100-1e-9)continue;
+    if(filt==="below"&&r.margin>=s.tm/100-1e-9)continue;
     if(filt==="loss"&&r.profit>=0)continue;
-    cnt++; sum+=r.margin; if(r.margin<state.target/100-1e-9)below++; if(r.profit<0)loss++;
+    cnt++; sum+=r.margin; if(r.margin<s.tm/100-1e-9)below++; if(r.profit<0)loss++;
     if(s.range!==last){
       let extra="";
       if(std&&isTgt(s0)){const grp=state.skus.filter(x=>x.range===s.range&&isTgt(x)), nMan=grp.filter(x=>!x.auto).length;
-        extra=nMan?`<button class="all-target" data-range="${esc(s.range)}">Set all ${grp.length} to target price</button><span class="grp-note">${nMan} typed price${nMan>1?"s":""}</span>`:`<span class="grp-note">All at target price (${state.target}% margin)</span>`;}
+        extra=nMan?`<button class="all-target" data-range="${esc(s.range)}">Set all ${grp.length} to target price</button><span class="grp-note">${nMan} typed price${nMan>1?"s":""}</span>`:`<span class="grp-note">All at target price</span>`;}
       const nSec=state.skus.filter(x=>x.range===s.range).length;
       const armK=state.list+"|"+s.range, armed=delSecArm===armK;
       extra+=std?`<button type="button" class="sec-del${armed?" armed":""}" data-range="${esc(s.range)}" title="Delete this section and its ${nSec} SKUs from every price list">${armed?`Click again: deletes ${nSec} SKUs from all price lists`:"Delete section"}</button>`
@@ -660,7 +673,7 @@ function renderTable(){
       <td class="num muted">${n2(r.exf)}</td><td class="num">${n2(r.total)}</td>
       <td class="num"><span class="pcell">${isTgt(s0)&&!s0.auto?`<button class="to-target" data-id="${s.id}" title="Switch to the target price">Target</button>`:""}<input class="price${lp.src==="target"?" auto":""}" type="number" step="0.05" id="price-${s.id}" data-id="${s.id}" value="${priceVal}" aria-label="Standard price ${esc(s.name)}"></span></td>
       <td class="num ${r.profit<0?"gap-neg":""}">${n2(r.profit)}</td>
-      <td><span class="pill ${mClass(r.margin)}">${pct(r.margin)}</span></td><td class="num">${n2(tp)}</td>${gapTd}</tr>`;
+      <td><span class="pill ${mClass(r.margin,s.tm)}">${pct(r.margin)}</span></td><td class="num">${n2(tp)}</td>${gapTd}</tr>`;
     }else{
       const sp=stdPrice(s0,A,D), rs=cost(S(s0,"std"),A,D,sp), d=sp?(sp-lp.p)/sp:0;
       if(lp.src==="deal"){disc+=d;nd++;}
@@ -670,7 +683,7 @@ function renderTable(){
       <td class="num muted">${n2(sp)}</td>
       <td class="num"><input class="price${lp.src!=="deal"?" auto":""}" type="number" step="0.05" id="cprice-${s.id}" data-id="${s.id}" value="${lp.src==="deal"?lp.p:""}" placeholder="${n2(lp.p)}" aria-label="Agreed price ${esc(s.name)}"></td>
       <td class="num ${r.profit<0?"gap-neg":""}">${n2(r.profit)}</td>
-      <td><span class="pill ${mClass(r.margin)}">${pct(r.margin)}</span></td>
+      <td><span class="pill ${mClass(r.margin,s.tm)}">${pct(r.margin)}</span></td>
       <td class="num muted">${pct(rs.margin)}</td>${gapTd}</tr>`;
     }
   }
@@ -754,18 +767,18 @@ function renderDetail(){
   // all price lists for this SKU
   let lists=`<dt>Standard${s.auto?" (= target)":""}</dt><dd>${gbp(stdPrice(s,A,D))} · ${pct(cost(S(s0,"std"),A,D,stdPrice(s0,A,D)).margin)}</dd>`;
   for(const cu of state.customers){const dv=cu.prices[s.id]; if(dv){lists+=`<dt>${esc(cu.name)}</dt><dd>${gbp(dv.p)} · ${pct(cost(S(s0,cu.id),A,D,dv.p).margin)}</dd>`;}}
-  const qv = quoteVal ?? (quoteMode==="margin"?state.target:+lp.p.toFixed(2));
+  const qv = quoteVal ?? (quoteMode==="margin"?s.tm:+lp.p.toFixed(2));
   const qPrice = quoteMode==="margin"? r.target(qv) : qv;
   const q=cost(s,A,D,qPrice);
   let sens="";
   for(const d of [-8,-4,0,4,8]){
     const A2=Object.assign({},A,{gbpinr:A.gbpinr+d}); const r2=cost(s,A2,derive(A2),lp.p);
-    sens+=`<tr><td class="num">${(A.gbpinr+d).toFixed(1)}</td><td class="num">${n2(r2.total)}</td><td><span class="pill ${mClass(r2.margin)}">${pct(r2.margin)}</span></td></tr>`;
+    sens+=`<tr><td class="num">${(A.gbpinr+d).toFixed(1)}</td><td class="num">${n2(r2.total)}</td><td><span class="pill ${mClass(r2.margin,s.tm)}">${pct(r2.margin)}</span></td></tr>`;
   }
   const listName=isStd()?"standard price":esc(cust().name)+(lp.src==="deal"?" price":" (standard)");
   box.innerHTML=`
    <div><h2>${esc(s.name)}</h2>
-   <div class="sub">${s.range} · ${s.density} kg/m³ · ${s.mm} mm · ${s.lam1} + ${s.lam2} · ${s.comm}% commission${s.rebate?` · ${s.rebate}% rebate`:""}</div></div>
+   <div class="sub">${s.range} · ${s.density} kg/m³ · ${s.mm} mm · ${s.lam1} + ${s.lam2} · ${s.comm}% commission${s.rebate?` · ${s.rebate}% rebate`:""} · ${s.tm}% target margin</div></div>
    <div><p class="section-title">Where the ${listName} of ${gbp(lp.p)} goes</p>
      <div class="stack" role="img" aria-label="Cost stack against price">${bar}</div>
      <div class="stack-scale"><span>£0</span><span>${gbp(scale)}</span></div></div>
@@ -778,7 +791,7 @@ function renderDetail(){
        <input id="q-val" type="number" step="${quoteMode==="margin"?0.5:0.05}" value="${+(+qv).toFixed(3)}" aria-label="Quote value">
        <label for="q-ctrs" style="font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center">Containers <input id="q-ctrs" type="number" min="1" step="1" value="${ctrs}" style="width:56px"></label>
      </div>
-     <div class="row"><span class="big">${gbp(qPrice)}</span><span class="muted">/roll · ${gbp(qPrice/A.rollArea)}/m² · <span class="pill ${mClass(q.margin)}">${pct(q.margin)}</span></span></div>
+     <div class="row"><span class="big">${gbp(qPrice)}</span><span class="muted">/roll · ${gbp(qPrice/A.rollArea)}/m² · <span class="pill ${mClass(q.margin,s.tm)}">${pct(q.margin)}</span></span></div>
      <dl class="kv">
        <dt>Markup on cost</dt><dd>${pct(q.profit/q.total)}</dd>
        <dt>Revenue (${ctrs} × ${s.rolls} rolls)</dt><dd>${gbp(qPrice*s.rolls*ctrs)}</dd>
@@ -892,13 +905,13 @@ function renderNotes(){
   const diffs=state.skus.filter(s=>s.sheetPrice!=null&&s.std!=null&&Math.abs(s.sheetPrice-s.std)>0.006);
   const fnc=state.customers.find(c=>c.id==="fnc");
   const fncRows=fnc?Object.entries(fnc.prices).map(([id,v])=>{const s=state.skus.find(x=>x.id===id);return s?{s,r:cost(S(s,"fnc"),A,D,v.p)}:null;}).filter(Boolean):[];
-  const fncLow=fncRows.filter(x=>x.r.margin<state.target/100);
+  const fncLow=fncRows.filter(x=>x.r.margin<targetOf(x.s,"fnc")/100);
   const notes=[
    {cls:"info",h:"Where the numbers come from",p:[
      "SKU specs: Cost Sheet UK 2, “Pricing Model UK (3)”, taken as entered. Cost assumptions: the first sheet (Floowise costing): foam scrap ₹60/kg, binder ₹230/kg, conversion ₹22/kg, adhesive 0.7 kg per side, polythene ₹50 and UK inland £1,200. Cost Sheet UK 2 used ₹40, ₹225, ₹20, 0.45 kg, ₹40 and £1,400, which lowers landed cost.",
      "Standard prices: Direct container pricing, “Standard Prices”. Customer prices: the “Deviations” sheet, kept as separate price lists."]},
    {h:"Floorwise is priced at the target margin for now",p:[
-     `Floorwise is not in the new cost sheet, so its 16 SKUs use the specs from the first sheet (Wilkies backings, 2.5% commission, its rolls per container). Their standard price follows the target margin (now ${state.target}%), from ${gbp(Math.min(...fwr))} to ${gbp(Math.max(...fwr))}. Type a price in the table to replace it; clear the box to go back to target.`]},
+     `Floorwise is not in the new cost sheet, so its 16 SKUs use the specs from the first sheet (Wilkies backings, 2.5% commission, its rolls per container). Their standard price follows the target margin (now ${TGof("std").all??state.target}% unless set per SKU), from ${gbp(Math.min(...fwr))} to ${gbp(Math.max(...fwr))}. Type a price in the table to replace it; clear the box to go back to target.`]},
    {h:"Price list differs from the cost sheet’s selling price",p:[
      "The tool uses the price list. These SKUs had a different selling price in the cost sheet:",
      diffs.map(s=>`${esc(s.name)}: sheet ${gbp(s.sheetPrice)}, price list ${gbp(s.std)}`).join(" · ")]},
@@ -921,14 +934,6 @@ function syncFx(){document.getElementById("fx-gbpinr").value=state.A.gbpinr;docu
 ["gbpinr","usdinr"].forEach(k=>document.getElementById("fx-"+k).addEventListener("change",e=>{
   const v=parseFloat(e.target.value); if(!isFinite(v)||v<=0)return; state.A[k]=v; save(); renderAll();
 }));
-const tEl=document.getElementById("target");
-const rbEl=document.getElementById("rebate-all");
-function syncRebateAll(){const L=RBof(state.list); rbEl.value=L.all??""; rbEl.placeholder="0";}
-rbEl.addEventListener("change",()=>{const L=RBof(state.list), raw=rbEl.value.trim(), v=parseFloat(raw);
-  if(raw===""){L.all=null;L.by={};} else if(isFinite(v)&&v>=0){L.all=v;L.by={};} else return;
-  save(); quoteVal=null; renderTable(); renderDetail(); renderNotes();
-  toast(raw===""?`Rebate cleared for ${listNameOf(state.list)}`:`${v}% rebate on all SKUs in ${listNameOf(state.list)}. Change single SKUs in the Rebate % column.`);});
-tEl.addEventListener("change",()=>{const v=parseFloat(tEl.value); if(isFinite(v)){state.target=v;quoteVal=null;save();renderAll();}});
 document.getElementById("filter").addEventListener("change",e=>{if(isStd())state.filter=e.target.value;else state.cfilter=e.target.value;save();renderTable();});
 document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
 function setTab(t){state.tab=t;save();
@@ -957,20 +962,20 @@ function buildRows(){
     out[l]=state.skus.filter(s0=>!hiddenIn(cl,s0.range)).map(s0=>{const s=S(s0,l), lp=listPrice(s,l,A,D), r=cost(s,A,D,lp.p);
       return {id:s0.id,group:s0.range,name:s0.name,density:s0.density,mm:s0.mm,rolls:s0.rolls,lam:s0.lam1+(s0.lam2!=="None"?" + "+s0.lam2:""),
         comm:s.comm,rebate:s.rebate,rebateAmt:r.c.rebate,exf:r.exf,haul:r.c.haul,ocean:r.c.ocean,uk:r.c.uk,commAmt:r.c.comm,landed:r.total,price:lp.p,src:lp.src,since:lp.d||"",
-        std:stdPrice(s0,A,D),profit:r.profit,margin:r.margin,tgt:r.target(state.target)};});
+        std:stdPrice(s0,A,D),profit:r.profit,margin:r.margin,tm:s.tm,tgt:r.target(s.tm)};});
   }
   return out;
 }
 const listNameOf=(id,customers)=>id==="std"?"Standard":((customers||state.customers).find(c=>c.id===id)||{}).name||id;
 function excelRows(rows,list){
   const std=list==="std";
-  const head=["Group","SKU","Density","Thickness mm","Rolls/container","Lamination","Commission %","Rebate %","Ex-factory £","India haulage £","Ocean £","UK inland £","Commission £","Landed £","Rebate £",...(std?[]:["Standard price £"]),std?"Selling price £":"Agreed selling price £",...(std?[]:["Price source","Agreed since"]),"Profit £","Margin %","Price @ target £"];
+  const head=["Group","SKU","Density","Thickness mm","Rolls/container","Lamination","Commission %","Rebate %","Ex-factory £","India haulage £","Ocean £","UK inland £","Commission £","Landed £","Rebate £",...(std?[]:["Standard price £"]),std?"Selling price £":"Agreed selling price £",...(std?[]:["Price source","Agreed since"]),"Profit £","Margin %","Target margin %","Price @ target £"];
   return [head,...rows.map(r=>[r.group,r.name,r.density,r.mm,r.rolls,r.lam,r.comm,r.rebate??0,r2(r.exf),r2(r.haul),r2(r.ocean),r2(r.uk),r2(r.commAmt),r2(r.landed),r2(r.rebateAmt??0),...(std?[]:[r2(r.std)]),r2(r.price),
-    ...(std?[]:[r.src==="deal"?"Agreed":r.src==="target"?"Target":"Standard",r.since]),r2(r.profit),r1(r.margin),r2(r.tgt)])];
+    ...(std?[]:[r.src==="deal"?"Agreed":r.src==="target"?"Target":"Standard",r.since]),r2(r.profit),r1(r.margin),r.tm??"",r2(r.tgt)])];
 }
 document.getElementById("btn-copy").addEventListener("click",()=>{
   const rows=buildRows()[state.list], name=listNameOf(state.list);
-  const pre=[["Sarva Price Desk – "+name],["Copied",new Date().toLocaleString("en-GB")],["₹ per £",state.A.gbpinr,"₹ per $",state.A.usdinr,"Target margin %",state.target],[]];
+  const pre=[["Sarva Price Desk – "+name],["Copied",new Date().toLocaleString("en-GB")],["₹ per £",state.A.gbpinr,"₹ per $",state.A.usdinr],[]];
   copyText(tsv([...pre,...excelRows(rows,state.list)]),`Copied ${name} (${rows.length} SKUs). Paste into cell A1 in Excel or Google Sheets.`);
 });
 
@@ -990,7 +995,7 @@ function makeVersion(name,note,list,lists,groups){
   return {id:"v"+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name,note,list:Ls.includes(list)?list:Ls[0],lists:Ls,groups:groups||groupsNow(),partial,
     created:new Date().toISOString(),target:state.target,fx:{gbpinr:state.A.gbpinr,usdinr:state.A.usdinr},
     customers:state.customers.map(c=>({id:c.id,name:c.name,full:c.full})),
-    state:JSON.parse(JSON.stringify({A:state.A,skus:state.skus,customers:state.customers,commissions:state.commissions,rebates:state.rebates,target:state.target})),
+    state:JSON.parse(JSON.stringify({A:state.A,skus:state.skus,customers:state.customers,commissions:state.commissions,rebates:state.rebates,targets:state.targets,target:state.target})),
     rows};
 }
 const sp=document.getElementById("savepanel");
@@ -1044,7 +1049,7 @@ document.getElementById("vlist").addEventListener("click",e=>{
     const auto=makeVersion(`Auto-saved before loading “${v.name}”`,"Your working copy as it was just before a saved version was loaded into the tool.",state.list);
     versions.unshift(auto); if(!saveVersions()){versions.shift();return;}
     const st=JSON.parse(JSON.stringify(v.state));
-    if(!v.partial){Object.assign(state,{A:Object.assign({},DEFAULT_A,st.A),skus:st.skus,customers:st.customers,commissions:st.commissions,rebates:st.rebates||{},target:st.target,list:v.list});}
+    if(!v.partial){Object.assign(state,{A:Object.assign({},DEFAULT_A,st.A),skus:st.skus,customers:st.customers,commissions:st.commissions,rebates:st.rebates||{},targets:st.targets||{},target:st.target,list:v.list});}
     else{
       const G=new Set(v.groups), inG=id=>{const x=st.skus.find(k=>k.id===id)||state.skus.find(k=>k.id===id); return x&&G.has(x.range);};
       state.A=Object.assign({},DEFAULT_A,st.A); state.target=st.target;
@@ -1053,6 +1058,7 @@ document.getElementById("vlist").addEventListener("click",e=>{
         if(i>=0){if(keepStd){sk.std=state.skus[i].std; sk.auto=state.skus[i].auto;} state.skus[i]=sk;} else{let at=-1; state.skus.forEach((x,j)=>{if(x.range===sk.range)at=j;}); at<0?state.skus.push(sk):state.skus.splice(at+1,0,sk);}}
       for(const l of v.lists){
         if(st.commissions&&st.commissions[l])state.commissions[l]=st.commissions[l];
+        if(st.targets&&st.targets[l]){if(!state.targets)state.targets={}; state.targets[l]=st.targets[l];}
         if(st.rebates&&st.rebates[l]){if(!state.rebates)state.rebates={}; state.rebates[l]=st.rebates[l];}
         if(l==="std")continue;
         const src=st.customers.find(c=>c.id===l); if(!src)continue;
@@ -1077,7 +1083,7 @@ function varsPanel(v){
   const groups=GROUPS.map(g=>`<div class="vgrp"><h4>${g.t}</h4><dl>${g.f.map(([k,l,u])=>{const val=VA[k],now=CA[k];
       return `<dt>${l}</dt><dd class="${val!==DEFAULT_A[k]?"chg":""}">${fmtIn(val)} <span class="u">${u}</span>${vCompare&&now!==val?`<span class="now">now ${fmtIn(now)}</span>`:""}</dd>`;}).join("")}</dl></div>`).join("");
   const pricing=`<div class="vgrp"><h4>Pricing settings</h4><dl>
-    <dt>Target margin</dt><dd>${st.target}%${vCompare&&state.target!==st.target?`<span class="now">now ${state.target}%</span>`:""}</dd>
+    ${["std",...(v.customers||[]).map(c=>c.id)].map(l=>{const L=(st.targets||{})[l]; const n=L?Object.keys(L.by||{}).length:0; const base=L&&L.all!=null?`${L.all}% on all SKUs`:(l==="std"?`${st.target}% on all SKUs`:"Same as Standard"); return `<dt>Target margin · ${esc(listNameOf(l,v.customers))}</dt><dd style="font-family:var(--f-body)">${esc(base+(n?`, ${n} SKU${n>1?"s":""} set individually`:""))}</dd>`;}).join("")}
     <dt>Commission · Standard</dt><dd style="font-family:var(--f-body)">${esc(commText(cm.std,"Sheet rates"))}</dd>
     ${(v.customers||[]).map(c=>`<dt>Commission · ${esc(c.name)}</dt><dd style="font-family:var(--f-body)">${esc(commText(cm[c.id],"Same as Standard"))}</dd>`).join("")}
     ${["std",...(v.customers||[]).map(c=>c.id)].map(l=>{const L=(st.rebates||{})[l]; const n=L?Object.keys(L.by||{}).length:0; const t=!L||(L.all==null&&!n)?"None":(L.all!=null?`${L.all}% on all SKUs`:"Per SKU")+(n?`, ${n} SKU${n>1?"s":""} set individually`:""); return `<dt>Rebate · ${esc(listNameOf(l,v.customers))}</dt><dd style="font-family:var(--f-body)">${esc(t)}</dd>`;}).join("")}
@@ -1101,8 +1107,8 @@ function renderVersionView(){
     const tag=r.src==="deal"?`<span class="tag deal">agreed</span>`:r.src==="target"?`<span class="tag target">= target</span>`:(std?"":`<span class="tag std">std</span>`);
     body+=`<tr><td>${esc(r.name)}${tag}</td><td class="num muted">${r.comm}</td><td class="num muted">${r.rebate??0}</td><td class="num muted">${n2(r.exf)}</td><td class="num">${n2(r.landed)}</td>
       ${std?"":`<td class="num muted">${n2(r.std)}</td>`}<td class="num"><b style="font-weight:600">${n2(r.price)}</b></td><td class="num ${r.profit<0?"gap-neg":""}">${n2(r.profit)}</td>
-      <td><span class="pill ${mClass(r.margin)}">${pct(r.margin)}</span></td>
-      ${vCompare?(n?`<td class="num">${n2(n.price)}</td><td><span class="pill ${mClass(n.margin)}">${pct(n.margin)}</span></td><td class="num ${dm>0.05?"dpos":dm<-0.05?"dneg":"muted"}">${(dm>=0?"+":"")+dm.toFixed(1)} pts</td>`:`<td class="muted" colspan="3">not in current list</td>`):""}</tr>`;
+      <td><span class="pill ${mClass(r.margin,r.tm)}">${pct(r.margin)}</span></td>
+      ${vCompare?(n?`<td class="num">${n2(n.price)}</td><td><span class="pill ${mClass(n.margin,n.tm)}">${pct(n.margin)}</span></td><td class="num ${dm>0.05?"dpos":dm<-0.05?"dneg":"muted"}">${(dm>=0?"+":"")+dm.toFixed(1)} pts</td>`:`<td class="muted" colspan="3">not in current list</td>`):""}</tr>`;
   }
   box.innerHTML=`<div class="vhead"><div><h2>${esc(v.name)}<span class="frozen">Frozen</span></h2>
       <div class="meta">Saved ${fdt(v.created)} · ₹${v.fx.gbpinr}/£ · ₹${v.fx.usdinr}/$ · target margin ${v.target}%${v.note?" · "+esc(v.note):""}${v.partial?`<br>Includes: ${esc((v.lists||[]).map(l=>listNameOf(l,v.customers)).join(", "))} · ${esc((v.groups||[]).join(", "))}`:""}</div></div>
@@ -1193,7 +1199,7 @@ function renderBulk(){
     const m=cost(s,A,D,r.price).margin, hidden=hiddenIn(cu,s0.range);
     return `<tr class="${seen[r.id]>1?"dup":""}"><td>${esc(r.name)}</td><td><select data-i="${i}">${opts(r.id)}</select>${seen[r.id]>1?` <span class="ptag">${isLast?"listed more than once, this row is used":"listed again below, this row is ignored"}</span>`:""}${hidden?` <span class="ptag">section will be shown again</span>`:""}</td>
       <td class="num muted">${n2(cur.p)}${cu&&cur.src!=="deal"?" <small>std</small>":""}</td><td class="num"><b style="font-weight:600">${n2(r.price)}</b></td>
-      <td class="num ${ch>0.004?"dpos":ch<-0.004?"dneg":"muted"}">${(ch>=0?"+":"")+ch.toFixed(2)}</td><td><span class="pill ${mClass(m)}">${pct(m)}</span></td></tr>`;}).join("");
+      <td class="num ${ch>0.004?"dpos":ch<-0.004?"dneg":"muted"}">${(ch>=0?"+":"")+ch.toFixed(2)}</td><td><span class="pill ${mClass(m,s.tm)}">${pct(m)}</span></td></tr>`;}).join("");
   box.innerHTML=`<div class="bsum"><span><b>${n}</b> price${n===1?"":"s"} to update</span><span>${up} up · ${down} down · ${n-up-down} unchanged</span>${miss?`<span class="bad"><b>${miss}</b> not matched</span>`:""}</div>
     <div class="tablebox"><table><thead><tr><th>Name in your list</th><th>Matched SKU</th><th>Current £</th><th>New £</th><th>Change</th><th>New margin</th></tr></thead><tbody>${body}</tbody></table></div>`;
   box.querySelectorAll("select[data-i]").forEach(sel=>sel.addEventListener("change",()=>{bulkRows[+sel.dataset.i].id=sel.value; renderBulk();}));
@@ -1216,7 +1222,7 @@ bkp.addEventListener("submit",e=>{
 });
 
 let tt; function toast(m){const t=document.getElementById("toast");t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,3200);}
-function renderAll(){syncFx();tEl.value=state.target;renderLists();renderTable();renderDetail();renderAssume();renderNotes();renderVersions();}
+function renderAll(){syncFx();renderLists();renderTable();renderDetail();renderAssume();renderNotes();renderVersions();}
 renderAll(); setTab(state.tab);
 window.__fw={cost,derive,DEFAULT_A,defaultSkus,defaultCustomers,stdPrice:(s)=>stdPrice(s,state.A,derive(state.A)),setList:l=>{state.list=l;renderAll();}};
 })();
