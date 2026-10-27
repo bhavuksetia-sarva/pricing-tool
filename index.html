@@ -1099,13 +1099,13 @@ function renderVersionView(){
   const lists=Object.keys(v.rows); if(!lists.includes(vList))vList=v.list;
   const rows=v.rows[vList]||[], std=vList==="std";
   const nowRows=vCompare?(buildRows()[vList]||[]):[], nowBy=Object.fromEntries(nowRows.map(r=>[r.id,r]));
-  const cols=9+(std?0:1)+(vCompare?3:0);
+  const cols=10+(std?0:1)+(vCompare?3:0);
   let body="",last="";
   for(const r of rows){
     if(r.group!==last){body+=`<tr class="grp"><td colspan="${cols}">${esc(r.group)}</td></tr>`;last=r.group;}
     const n=nowBy[r.id], dm=n?(n.margin-r.margin)*100:NaN;
     const tag=r.src==="deal"?`<span class="tag deal">agreed</span>`:r.src==="target"?`<span class="tag target">= target</span>`:(std?"":`<span class="tag std">std</span>`);
-    body+=`<tr><td>${esc(r.name)}${tag}</td><td class="num muted">${r.comm}</td><td class="num muted">${r.rebate??0}</td><td class="num muted">${n2(r.exf)}</td><td class="num">${n2(r.landed)}</td>
+    body+=`<tr><td>${esc(r.name)}${tag}</td><td class="num muted">${r.rolls??""}</td><td class="num muted">${r.comm}</td><td class="num muted">${r.rebate??0}</td><td class="num muted">${n2(r.exf)}</td><td class="num">${n2(r.landed)}</td>
       ${std?"":`<td class="num muted">${n2(r.std)}</td>`}<td class="num"><b style="font-weight:600">${n2(r.price)}</b></td><td class="num ${r.profit<0?"gap-neg":""}">${n2(r.profit)}</td>
       <td><span class="pill ${mClass(r.margin,r.tm)}">${pct(r.margin)}</span></td>
       ${vCompare?(n?`<td class="num">${n2(n.price)}</td><td><span class="pill ${mClass(n.margin,n.tm)}">${pct(n.margin)}</span></td><td class="num ${dm>0.05?"dpos":dm<-0.05?"dneg":"muted"}">${(dm>=0?"+":"")+dm.toFixed(1)} pts</td>`:`<td class="muted" colspan="3">not in current list</td>`):""}</tr>`;
@@ -1116,7 +1116,7 @@ function renderVersionView(){
       <label for="v-compare" style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="v-compare"${vCompare?" checked":""}> Compare with current</label>
       <button id="v-copy">Copy for Excel</button></div></div>
     ${varsPanel(v)}
-    <div class="tablebox"><table><thead><tr><th>SKU</th><th>Comm %</th><th>Rebate %</th><th>Ex-factory £</th><th>Landed £</th>${std?"":"<th>Standard £</th>"}<th>${std?"Selling price £":"Agreed selling price £"}</th><th>Profit £</th><th>Margin</th>${vCompare?"<th>Price now £</th><th>Margin now</th><th>Change</th>":""}</tr></thead><tbody>${body}</tbody></table></div>`;
+    <div class="tablebox"><table><thead><tr><th>SKU</th><th>Rolls/ctr</th><th>Comm %</th><th>Rebate %</th><th>Ex-factory £</th><th>Landed £</th>${std?"":"<th>Standard £</th>"}<th>${std?"Selling price £":"Agreed selling price £"}</th><th>Profit £</th><th>Margin</th>${vCompare?"<th>Price now £</th><th>Margin now</th><th>Change</th>":""}</tr></thead><tbody>${body}</tbody></table></div>`;
   box.querySelectorAll("button[data-vl]").forEach(b=>b.addEventListener("click",()=>{vList=b.dataset.vl;renderVersionView();}));
   box.querySelector("#v-compare").addEventListener("change",e=>{vCompare=e.target.checked;renderVersionView();});
   box.querySelector("#v-copy").addEventListener("click",()=>{
