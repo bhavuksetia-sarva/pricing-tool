@@ -250,6 +250,15 @@ button.sec-del.armed{background:var(--bad);color:var(--surface);border-color:var
 .bprev tr.dup td{background:var(--warn-soft)}
 .bprev .tablebox{max-height:360px;overflow:auto}
 @media (max-width:760px){.bulkpanel{grid-template-columns:1fr}}
+.vview button.vh{padding:2px 8px;font-size:11px;color:var(--muted)}
+.vview button.vh:hover{color:var(--bad);border-color:var(--bad)}
+.vview tr.isHidden td{opacity:.45}
+.vview tr.isHidden td:last-child{opacity:1}
+.vview tr.isHidden button.vh{color:var(--accent);border-color:var(--accent)}
+.vview tr.grp button.vh{float:right;font-family:var(--f-body);font-stretch:100%;text-transform:none;letter-spacing:0;font-weight:500}
+.vhid{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:12px;color:var(--muted)}
+.vhid b{color:var(--ink);font-weight:600}
+.vhid button{padding:2px 9px;font-size:12px}
 .dpos{color:var(--good)} .dneg{color:var(--bad)}
 .unmatched{columns:2 220px;margin:6px 0 0;padding-left:18px}
 </style>
@@ -982,11 +991,12 @@ document.getElementById("btn-copy").addEventListener("click",()=>{
 // ---------- saved versions ----------
 const VKEY="sarva-price-desk-versions-v1";
 let versions=(()=>{try{return JSON.parse(localStorage.getItem(VKEY)||"[]")||[];}catch(e){return [];}})();
-let vSel=null, vList=null, vCompare=false, vArm={};
+let vSel=null, vList=null, vCompare=false, vArm={}, vShowHidden=false;
+const vHid=v=>new Set(v.hide||[]);
 function saveVersions(){try{localStorage.setItem(VKEY,JSON.stringify(versions));return true;}catch(e){toast("Couldn’t save: this browser’s storage is full or blocked. Download a backup.");return false;}}
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}
 const fdt=iso=>{const d=new Date(iso);return d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})+", "+d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});};
-function vStats(v,list){const rows=v.rows[list]||[]; const use=list==="std"?rows:rows.filter(r=>r.src==="deal"); const n=use.length; return {n,avg:n?use.reduce((a,r)=>a+r.margin,0)/n:NaN};}
+function vStats(v,list){const H=vHid(v); const rows=(v.rows[list]||[]).filter(r=>!H.has(r.id)); const use=list==="std"?rows:rows.filter(r=>r.src==="deal"); const n=use.length; return {n,avg:n?use.reduce((a,r)=>a+r.margin,0)/n:NaN};}
 
 function makeVersion(name,note,list,lists,groups){
   const all=buildRows(), Ls=lists||Object.keys(all), G=groups?new Set(groups):null, rows={};
@@ -1034,7 +1044,7 @@ function renderVersions(){
     return `<tr class="${v.id===vSel?"on":""}" data-v="${v.id}"><td class="name"><b>${esc(v.name)}</b>${v.partial?`<span class="ptag" title="${esc((v.lists||[]).map(l=>listNameOf(l,v.customers)).join(", ")+" · "+(v.groups||[]).join(", "))}">Partial</span>`:""}${v.note?`<span class="vnote">${esc(v.note)}</span>`:""}</td>
     <td>${esc(listNameOf(v.list,v.customers))}</td><td class="num muted">${fdt(v.created)}</td><td class="num">${v.fx.gbpinr}</td><td class="muted" style="font-size:12px">${(()=>{const i=varsInfo(v);return i.nNow?`${i.nNow} differ from now`:"same as now";})()}</td>
     <td><span class="pill ${mClass(st.avg)}">${pct(st.avg)}</span> <span class="muted" style="font-size:12px">${st.n} SKU${st.n===1?"":"s"}</span></td>
-    <td><div class="acts"><button data-act="view">${v.id===vSel?"Hide":"View"}</button><button data-act="restore" title="Replace the numbers in the tool with this version. Your current work is saved as a version first.">${vArm[v.id+"restore"]?"Click again: current work is saved first":"Load into tool"}</button><button data-act="delete">${vArm[v.id+"delete"]?"Click again to delete":"Delete"}</button></div></td></tr>`;}).join("")}</tbody></table></div>`;
+    <td><div class="acts"><button data-act="view">${v.id===vSel?"Close":"View"}</button><button data-act="restore" title="Replace the numbers in the tool with this version. Your current work is saved as a version first.">${vArm[v.id+"restore"]?"Click again: current work is saved first":"Load into tool"}</button><button data-act="delete">${vArm[v.id+"delete"]?"Click again to delete":"Delete"}</button></div></td></tr>`;}).join("")}</tbody></table></div>`;
   renderVersionView();
 }
 document.getElementById("vlist").addEventListener("click",e=>{
@@ -1097,26 +1107,35 @@ function renderVersionView(){
   const box=document.getElementById("vview"), v=versions.find(x=>x.id===vSel);
   if(!v){box.innerHTML="";return;}
   const lists=Object.keys(v.rows); if(!lists.includes(vList))vList=v.list;
-  const rows=v.rows[vList]||[], std=vList==="std";
+  const H=vHid(v), all=v.rows[vList]||[], rows=all.filter(r=>!H.has(r.id)), shown=vShowHidden?all:rows, std=vList==="std";
+  const nHid=all.length-rows.length;
   const nowRows=vCompare?(buildRows()[vList]||[]):[], nowBy=Object.fromEntries(nowRows.map(r=>[r.id,r]));
-  const cols=10+(std?0:1)+(vCompare?3:0);
+  const cols=11+(std?0:1)+(vCompare?3:0);
   let body="",last="";
-  for(const r of rows){
-    if(r.group!==last){body+=`<tr class="grp"><td colspan="${cols}">${esc(r.group)}</td></tr>`;last=r.group;}
+  for(const r of shown){
+    if(r.group!==last){const gIds=all.filter(x=>x.group===r.group).map(x=>x.id), gAllHid=gIds.every(id=>H.has(id));
+      body+=`<tr class="grp"><td colspan="${cols}">${esc(r.group)}<button type="button" class="vh" data-vg="${esc(r.group)}">${gAllHid?"Show section":"Hide section"}</button></td></tr>`;last=r.group;}
+    const isH=H.has(r.id);
     const n=nowBy[r.id], dm=n?(n.margin-r.margin)*100:NaN;
     const tag=r.src==="deal"?`<span class="tag deal">agreed</span>`:r.src==="target"?`<span class="tag target">= target</span>`:(std?"":`<span class="tag std">std</span>`);
-    body+=`<tr><td>${esc(r.name)}${tag}</td><td class="num muted">${r.rolls??""}</td><td class="num muted">${r.comm}</td><td class="num muted">${r.rebate??0}</td><td class="num muted">${n2(r.exf)}</td><td class="num">${n2(r.landed)}</td>
+    body+=`<tr class="${isH?"isHidden":""}"><td>${esc(r.name)}${tag}</td><td class="num muted">${r.rolls??""}</td><td class="num muted">${r.comm}</td><td class="num muted">${r.rebate??0}</td><td class="num muted">${n2(r.exf)}</td><td class="num">${n2(r.landed)}</td>
       ${std?"":`<td class="num muted">${n2(r.std)}</td>`}<td class="num"><b style="font-weight:600">${n2(r.price)}</b></td><td class="num ${r.profit<0?"gap-neg":""}">${n2(r.profit)}</td>
       <td><span class="pill ${mClass(r.margin,r.tm)}">${pct(r.margin)}</span></td>
-      ${vCompare?(n?`<td class="num">${n2(n.price)}</td><td><span class="pill ${mClass(n.margin,n.tm)}">${pct(n.margin)}</span></td><td class="num ${dm>0.05?"dpos":dm<-0.05?"dneg":"muted"}">${(dm>=0?"+":"")+dm.toFixed(1)} pts</td>`:`<td class="muted" colspan="3">not in current list</td>`):""}</tr>`;
+      ${vCompare?(n?`<td class="num">${n2(n.price)}</td><td><span class="pill ${mClass(n.margin,n.tm)}">${pct(n.margin)}</span></td><td class="num ${dm>0.05?"dpos":dm<-0.05?"dneg":"muted"}">${(dm>=0?"+":"")+dm.toFixed(1)} pts</td>`:`<td class="muted" colspan="3">not in current list</td>`):""}<td><button type="button" class="vh" data-vh="${r.id}" title="${isH?"Show this SKU again":"Hide this SKU in this saved version"}">${isH?"Show":"Hide"}</button></td></tr>`;
   }
   box.innerHTML=`<div class="vhead"><div><h2>${esc(v.name)}<span class="frozen">Frozen</span></h2>
       <div class="meta">Saved ${fdt(v.created)} · ₹${v.fx.gbpinr}/£ · ₹${v.fx.usdinr}/$ · target margin ${v.target}%${v.note?" · "+esc(v.note):""}${v.partial?`<br>Includes: ${esc((v.lists||[]).map(l=>listNameOf(l,v.customers)).join(", "))} · ${esc((v.groups||[]).join(", "))}`:""}</div></div>
     <div class="vtools"><div class="seg" role="group" aria-label="Price list in this version">${lists.map(l=>`<button data-vl="${l}" aria-pressed="${l===vList}">${esc(listNameOf(l,v.customers))}</button>`).join("")}</div>
       <label for="v-compare" style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="v-compare"${vCompare?" checked":""}> Compare with current</label>
       <button id="v-copy">Copy for Excel</button></div></div>
+    ${nHid?`<div class="vhid"><span><b>${nHid}</b> SKU${nHid>1?"s":""} hidden in this version</span><button type="button" id="v-showhid">${vShowHidden?"Hide them again":"Show hidden"}</button><button type="button" id="v-unhideall">Unhide all</button><span>Hidden SKUs are left out of the table, averages and Copy for Excel. The saved numbers aren’t changed.</span></div>`:""}
     ${varsPanel(v)}
-    <div class="tablebox"><table><thead><tr><th>SKU</th><th>Rolls/ctr</th><th>Comm %</th><th>Rebate %</th><th>Ex-factory £</th><th>Landed £</th>${std?"":"<th>Standard £</th>"}<th>${std?"Selling price £":"Agreed selling price £"}</th><th>Profit £</th><th>Margin</th>${vCompare?"<th>Price now £</th><th>Margin now</th><th>Change</th>":""}</tr></thead><tbody>${body}</tbody></table></div>`;
+    <div class="tablebox"><table><thead><tr><th>SKU</th><th>Rolls/ctr</th><th>Comm %</th><th>Rebate %</th><th>Ex-factory £</th><th>Landed £</th>${std?"":"<th>Standard £</th>"}<th>${std?"Selling price £":"Agreed selling price £"}</th><th>Profit £</th><th>Margin</th>${vCompare?"<th>Price now £</th><th>Margin now</th><th>Change</th>":""}<th></th></tr></thead><tbody>${body}</tbody></table></div>`;
+  const setHide=(ids,hide)=>{const S2=vHid(v); ids.forEach(id=>hide?S2.add(id):S2.delete(id)); v.hide=[...S2]; saveVersions(); renderVersions();};
+  box.querySelectorAll("button[data-vh]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.vh; setHide([id],!H.has(id));}));
+  box.querySelectorAll("button[data-vg]").forEach(b=>b.addEventListener("click",()=>{const ids=all.filter(x=>x.group===b.dataset.vg).map(x=>x.id); setHide(ids,!ids.every(id=>H.has(id)));}));
+  const sh=box.querySelector("#v-showhid"); if(sh)sh.addEventListener("click",()=>{vShowHidden=!vShowHidden;renderVersionView();});
+  const ua=box.querySelector("#v-unhideall"); if(ua)ua.addEventListener("click",()=>{v.hide=[];saveVersions();renderVersions();toast("All SKUs shown again in this version");});
   box.querySelectorAll("button[data-vl]").forEach(b=>b.addEventListener("click",()=>{vList=b.dataset.vl;renderVersionView();}));
   box.querySelector("#v-compare").addEventListener("change",e=>{vCompare=e.target.checked;renderVersionView();});
   box.querySelector("#v-copy").addEventListener("click",()=>{
