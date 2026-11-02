@@ -210,6 +210,8 @@ td input.comm.ov{border-color:var(--accent);color:var(--accent);font-weight:500}
 .vgrp dd .u{color:var(--muted);font-size:11px}
 .vgrp dd.chg{color:var(--accent);font-weight:500}
 .vgrp dd .now{display:block;font-size:11px;color:var(--warn)}
+.vgrp .vtot{border-top:1px solid var(--line);padding-top:6px;margin-top:4px;font-weight:600}
+.vgrp dt.vtot .vsub{display:block;font-weight:400;font-size:11px;color:var(--muted)}
 .vlegend{padding:0 16px 12px;color:var(--muted);font-size:12px}
 .vlegend b{color:var(--accent);font-weight:500}
 .vlegend i{color:var(--warn);font-style:normal}
@@ -1091,7 +1093,8 @@ function varsPanel(v){
   const {VA,CA,nNow,nSheet}=varsInfo(v), st=v.state, cm=st.commissions||{};
   const fw=(st.skus||[]).filter(x=>x.range==="Sarva · Floorwise"), fwT=fw.filter(x=>x.auto).length;
   const groups=GROUPS.map(g=>`<div class="vgrp"><h4>${g.t}</h4><dl>${g.f.map(([k,l,u])=>{const val=VA[k],now=CA[k];
-      return `<dt>${l}</dt><dd class="${val!==DEFAULT_A[k]?"chg":""}">${fmtIn(val)} <span class="u">${u}</span>${vCompare&&now!==val?`<span class="now">now ${fmtIn(now)}</span>`:""}</dd>`;}).join("")}</dl></div>`).join("");
+      return `<dt>${l}</dt><dd class="${val!==DEFAULT_A[k]?"chg":""}">${fmtIn(val)} <span class="u">${u}</span>${vCompare&&now!==val?`<span class="now">now ${fmtIn(now)}</span>`:""}</dd>`;}).join("")}${g.t.startsWith("Container")?(()=>{const VD=derive(VA), CD=derive(CA), t=VD.haulCtr+VD.oceanCtr+VD.ukCtr, tn=CD.haulCtr+CD.oceanCtr+CD.ukCtr;
+        return `<dt class="vtot">Total per container<span class="vsub">haulage ${gbp(VD.haulCtr)} + ocean ${gbp(VD.oceanCtr)} + UK ${gbp(VD.ukCtr)}</span></dt><dd class="vtot">${gbp(t)}${vCompare&&Math.abs(tn-t)>0.005?`<span class="now">now ${gbp(tn)}</span>`:""}</dd>`;})():""}</dl></div>`).join("");
   const pricing=`<div class="vgrp"><h4>Pricing settings</h4><dl>
     ${["std",...(v.customers||[]).map(c=>c.id)].map(l=>{const L=(st.targets||{})[l]; const n=L?Object.keys(L.by||{}).length:0; const base=L&&L.all!=null?`${L.all}% on all SKUs`:(l==="std"?`${st.target}% on all SKUs`:"Same as Standard"); return `<dt>Target margin · ${esc(listNameOf(l,v.customers))}</dt><dd style="font-family:var(--f-body)">${esc(base+(n?`, ${n} SKU${n>1?"s":""} set individually`:""))}</dd>`;}).join("")}
     <dt>Commission · Standard</dt><dd style="font-family:var(--f-body)">${esc(commText(cm.std,"Sheet rates"))}</dd>
@@ -1141,7 +1144,8 @@ function renderVersionView(){
   box.querySelector("#v-copy").addEventListener("click",()=>{
     const pre=[["Sarva Price Desk – saved version"],["Version",v.name],["Saved",fdt(v.created)],["Price list",listNameOf(vList,v.customers)],["₹ per £",v.fx.gbpinr,"₹ per $",v.fx.usdinr,"Target margin %",v.target],...(v.note?[["Note",v.note]]:[]),[]];
     const VA=Object.assign({},DEFAULT_A,v.state.A);
-    const vars=[[],["Variables used"],["Group","Variable","Value","Unit"],...GROUPS.flatMap(g=>g.f.map(([k,l,u])=>[g.t,l,VA[k],u]))];
+    const VD=derive(VA);
+    const vars=[[],["Variables used"],["Group","Variable","Value","Unit"],...GROUPS.flatMap(g=>g.f.map(([k,l,u])=>[g.t,l,VA[k],u])),["Container & freight (40HQ)","Total per container (haulage + ocean + UK)",r2(VD.haulCtr+VD.oceanCtr+VD.ukCtr),"£"]];
     copyText(tsv([...pre,...excelRows(rows,vList),...vars]),`Copied “${v.name}” (${listNameOf(vList,v.customers)}) with its variables. Paste into cell A1.`);});
 }
 document.getElementById("v-download").addEventListener("click",()=>{
